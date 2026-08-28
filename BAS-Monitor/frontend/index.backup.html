@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BAS Experiment Monitor</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/fonts.css">
+<link rel="stylesheet" href="assets/css/outlined.css">
+
+<style>
+        .ghost-border {
+            border: 1px solid #30363D;
+        }
+        .pulse-active {
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(0, 218, 243, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 218, 243, 0); }
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(0, 218, 243, 0); }
+        }
+        .dark .ghost-border { border-color: #3b494c; }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md h-screen flex overflow-hidden">
+<!-- SideNavBar -->
+<nav class="bg-surface-container text-primary-fixed-dim font-label-caps left-0 w-64 bg-surface-container-low border-r border-outline-variant flex flex-col h-full py-panel-padding shrink-0 z-10 hidden md:flex">
+<div class="px-margin-page mb-8">
+<h1 class="font-display-lg text-primary-fixed-dim text-2xl truncate">BAS Monitor</h1>
+<p class="text-on-surface-variant font-caption mt-1">Active Session: 04:22:15</p>
+</div>
+<ul class="flex-1 space-y-2 px-gutter">
+<li>
+<a class="flex items-center px-4 py-3 rounded-lg text-primary-fixed-dim border-l-4 border-primary-fixed-dim bg-surface-container-highest opacity-80 transition-all" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+                    Overview
+                </a>
+</li>
+<li>
+<a class="flex items-center px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">checklist</span>
+                    Procedures
+                </a>
+</li>
+<li>
+<a class="flex items-center px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">terminal</span>
+                    Logs
+                </a>
+</li>
+<li>
+<a class="flex items-center px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">settings_suggest</span>
+                    Settings
+                </a>
+</li>
+</ul>
+<div class="px-gutter mt-auto pt-4 space-y-2">
+<button class="w-full flex justify-center items-center px-4 py-2 bg-error-container text-on-error-container border border-error rounded hover:bg-error transition-colors font-label-caps">
+                Abort Analysis
+            </button>
+<div class="flex border-t border-outline-variant pt-2 mt-2">
+<a class="flex-1 flex justify-center items-center py-2 text-on-surface-variant hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">help</span>
+</a>
+</div>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col h-screen overflow-hidden">
+<!-- TopAppBar -->
+<header class="bg-surface text-primary-fixed-dim font-body-md top-0 bg-surface-container border-b border-outline-variant flex justify-between items-center w-full px-margin-page h-16 shrink-0 z-10">
+<div class="flex items-center">
+<span class="font-display-lg text-primary-fixed-dim text-xl font-bold tracking-tight">BAS Experiment Monitor</span>
+</div>
+<div class="flex items-center space-x-6">
+<div class="flex items-center bg-surface-container-low px-3 py-1 rounded ghost-border font-data-lg text-on-surface">
+<span class="w-2 h-2 rounded-full bg-primary-fixed-dim mr-2 pulse-active"></span>
+                    12:01:25
+                </div>
+<div class="text-on-surface-variant font-label-caps flex items-center">
+                    Operator: Alpha-1
+                </div>
+<div class="flex space-x-2">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">light_mode</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Dashboard Grid -->
+<main class="flex-1 p-gutter gap-gutter grid grid-cols-12 grid-rows-6 overflow-hidden bg-surface-dim">
+<!-- Left Sidebar: Timeline -->
+<section class="col-span-3 row-span-5 bg-surface-container rounded-lg ghost-border p-panel-padding flex flex-col">
+<h2 class="font-label-caps text-on-surface-variant uppercase mb-4 tracking-wider flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-2">timeline</span> Procedure Sequence
+                </h2>
+<div class="flex-1 overflow-y-auto pr-2 relative">
+<!-- Vertical Line -->
+<div class="absolute left-[15px] top-4 bottom-4 w-px bg-outline-variant z-0"></div>
+<div class="space-y-6 relative z-10">
+<!-- Step 1 -->
+<div class="flex items-start">
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center shrink-0 border border-tertiary-fixed mr-3">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<div class="pt-1">
+<p class="font-data-lg text-on-surface">Step 1</p>
+<p class="font-caption text-on-surface-variant">Completed</p>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="flex items-start">
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center shrink-0 border border-tertiary-fixed mr-3">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<div class="pt-1">
+<p class="font-data-lg text-on-surface">Step 2</p>
+<p class="font-caption text-on-surface-variant">Completed</p>
+</div>
+</div>
+<!-- Step 3 (Current) -->
+<div class="flex items-start">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center shrink-0 border-2 border-primary-fixed-dim mr-3 shadow-[0_0_15px_rgba(0,218,243,0.4)]">
+<span class="material-symbols-outlined text-[16px]">adjust</span>
+</div>
+<div class="pt-1 bg-surface-container-high px-3 py-1 rounded-md ghost-border w-full">
+<p class="font-data-lg text-primary-fixed-dim">Step 3</p>
+<p class="font-caption text-primary flex items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-fixed-dim mr-1.5 pulse-active"></span> Current
+                                </p>
+</div>
+</div>
+<!-- Step 4 -->
+<div class="flex items-start">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center shrink-0 border border-outline-variant mr-3">
+<span class="material-symbols-outlined text-[16px]">radio_button_unchecked</span>
+</div>
+<div class="pt-1 opacity-50">
+<p class="font-data-lg text-on-surface">Step 4</p>
+<p class="font-caption text-on-surface-variant">Pending</p>
+</div>
+</div>
+<!-- Step 5 -->
+<div class="flex items-start">
+<div class="w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center shrink-0 border border-outline-variant mr-3">
+<span class="material-symbols-outlined text-[16px]">radio_button_unchecked</span>
+</div>
+<div class="pt-1 opacity-50">
+<p class="font-data-lg text-on-surface">Step 5</p>
+<p class="font-caption text-on-surface-variant">Pending</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Center Main: Video Area -->
+<section class="col-span-6 row-span-4 bg-surface-container-lowest rounded-lg ghost-border relative overflow-hidden flex flex-col">
+<div class="absolute top-4 left-4 z-20 flex items-center space-x-2">
+<div class="bg-error-container text-on-error-container font-label-caps px-2 py-1 rounded flex items-center border border-error/50">
+<span class="w-2 h-2 rounded-full bg-error mr-2 animate-pulse"></span>
+                        RECORDING
+                    </div>
+<div class="bg-surface-container/80 backdrop-blur-md text-on-surface font-label-caps px-2 py-1 rounded border border-outline-variant/50">
+                        Live Camera Feed
+                    </div>
+</div>
+<div class="absolute top-4 right-4 z-20">
+<div class="bg-surface-container/80 backdrop-blur-md text-primary-fixed-dim font-label-caps px-3 py-1.5 rounded border border-primary-fixed-dim/30 shadow-[0_0_10px_rgba(0,218,243,0.1)]">
+                        Action: Handling Sample
+                    </div>
+</div>
+<!-- Video Canvas -->
+<div class="flex-1 w-full h-full relative flex items-center justify-center bg-black">
+<!-- Simulated AI Bounding Box -->
+<div class="absolute w-64 h-80 border-2 border-primary-fixed-dim border-dashed rounded flex flex-col justify-end p-2 opacity-80" style="top: 20%; left: 35%;">
+<div class="bg-primary-fixed-dim/20 backdrop-blur-sm text-primary-fixed-dim font-label-caps text-[10px] w-fit px-1 self-start -mt-6">ID: ASTRO_01 | 94%</div>
+<div class="flex justify-between w-full">
+<div class="w-2 h-2 border-l-2 border-b-2 border-primary-fixed-dim"></div>
+<div class="w-2 h-2 border-r-2 border-b-2 border-primary-fixed-dim"></div>
+</div>
+</div>
+<div class="absolute w-64 h-80 border-2 border-transparent rounded flex justify-between w-full items-start p-0 opacity-80" style="top: 20%; left: 35%;">
+<div class="w-2 h-2 border-l-2 border-t-2 border-primary-fixed-dim"></div>
+<div class="w-2 h-2 border-r-2 border-t-2 border-primary-fixed-dim"></div>
+</div>
+</div>
+</section>
+<!-- Right Sidebar: Status & Alerts -->
+<section class="col-span-3 row-span-4 flex flex-col gap-gutter">
+<!-- Experiment Status -->
+<div class="bg-surface-container rounded-lg ghost-border p-4 flex-1 flex flex-col">
+<h2 class="font-label-caps text-on-surface-variant uppercase mb-3 flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-2">speed</span> Experiment Status
+                    </h2>
+<div class="grid grid-cols-2 gap-2 mb-4">
+<div class="bg-surface-container-high p-2 rounded ghost-border">
+<p class="font-caption text-on-surface-variant">Current Step</p>
+<p class="font-data-lg text-on-surface">Step 3</p>
+</div>
+<div class="bg-surface-container-high p-2 rounded ghost-border">
+<p class="font-caption text-on-surface-variant">Expected</p>
+<p class="font-data-lg text-on-surface">Step 3</p>
+</div>
+</div>
+<div class="flex justify-between items-center border-b border-outline-variant pb-3 mb-3">
+<span class="font-body-md text-on-surface-variant">Status:</span>
+<span class="font-label-caps text-tertiary-fixed bg-tertiary-container/10 px-2 py-0.5 rounded border border-tertiary-fixed/30 flex items-center">
+<span class="material-symbols-outlined text-[14px] mr-1">check_circle</span> VALID
+                        </span>
+</div>
+<div class="flex justify-between items-center mb-4">
+<span class="font-body-md text-on-surface-variant">AI Confidence:</span>
+<div class="flex items-center w-1/2">
+<div class="w-full bg-surface-container-highest rounded-full h-1.5 mr-2">
+<div class="bg-primary-fixed-dim h-1.5 rounded-full" style="width: 94%"></div>
+</div>
+<span class="font-data-lg text-primary-fixed-dim text-sm">94%</span>
+</div>
+</div>
+<div class="mt-auto bg-surface-container-low p-3 rounded border border-outline-variant/50">
+<p class="font-caption text-secondary-fixed-dim uppercase mb-1 flex items-center">
+<span class="material-symbols-outlined text-[14px] mr-1">lightbulb</span> Next Step Suggestion
+                         </p>
+<p class="font-body-md text-on-surface">Move to centrifuge (Step 4)</p>
+</div>
+</div>
+<!-- Alert Panel -->
+<div class="bg-surface-container rounded-lg ghost-border p-4 flex-1 flex flex-col">
+<h2 class="font-label-caps text-on-surface-variant uppercase mb-3 flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-2">verified_user</span> SYSTEM READINESS
+                    </h2>
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<span class="font-caption text-on-surface-variant">AI Models</span>
+<span class="font-label-caps text-tertiary-fixed-dim flex items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim mr-1.5"></span> READY
+                        </span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-caption text-on-surface-variant">Camera</span>
+<span class="font-label-caps text-tertiary-fixed-dim flex items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim mr-1.5"></span> READY
+                        </span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-caption text-on-surface-variant">Storage</span>
+<span class="font-label-caps text-tertiary-fixed-dim flex items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim mr-1.5"></span> READY
+                        </span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-caption text-on-surface-variant">Voice</span>
+<span class="font-label-caps text-tertiary-fixed-dim flex items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim mr-1.5"></span> READY
+                        </span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-caption text-on-surface-variant">IP Stream</span>
+<span class="font-label-caps text-tertiary-fixed-dim flex items-center">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim mr-1.5"></span> READY
+                        </span>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom Control Bar (Left/Center area) -->
+<section class="col-span-9 row-span-2 bg-surface-container rounded-lg ghost-border p-4 flex flex-col justify-between">
+<!-- Input Source Tabs & Stream Status -->
+<div class="flex justify-between items-center border-b border-outline-variant pb-3">
+<div class="flex space-x-2">
+<button class="bg-primary-fixed-dim text-on-primary-fixed font-label-caps px-4 py-1.5 rounded flex items-center">
+<span class="material-symbols-outlined text-[16px] mr-2">videocam</span> Live Camera
+                        </button>
+<button class="bg-transparent border border-outline text-on-surface-variant hover:border-primary-fixed-dim hover:text-primary-fixed-dim font-label-caps px-4 py-1.5 rounded flex items-center transition-colors">
+<span class="material-symbols-outlined text-[16px] mr-2">upload_file</span> Upload Video
+                        </button>
+</div>
+<div class="flex items-center space-x-6">
+<div class="flex flex-col text-right">
+<span class="font-caption text-on-surface-variant">IP Stream</span>
+<span class="font-label-caps text-tertiary-fixed-dim flex items-center justify-end">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary-fixed-dim mr-1.5 pulse-active"></span> CONNECTED
+                             </span>
+</div>
+<div class="font-data-lg text-on-surface text-sm bg-surface-container-low px-2 py-1 rounded ghost-border">
+                            192.168.1.20
+                        </div>
+</div>
+</div>
+<!-- Main Actions -->
+<div class="flex justify-between items-end mt-4">
+<div class="flex space-x-3">
+<button class="bg-transparent border border-primary-fixed-dim text-primary-fixed-dim hover:bg-primary-fixed-dim/10 font-label-caps px-6 py-2 rounded flex items-center transition-colors">
+<span class="material-symbols-outlined mr-2">play_arrow</span> Start Analysis
+                        </button>
+<button class="bg-surface-container-high border border-outline-variant text-on-surface hover:bg-surface-bright font-label-caps px-4 py-2 rounded flex items-center transition-colors">
+<span class="material-symbols-outlined mr-2">pause</span> Pause
+                        </button>
+<button class="bg-surface-container-high border border-outline-variant text-on-surface hover:bg-surface-bright font-label-caps px-4 py-2 rounded flex items-center transition-colors">
+<span class="material-symbols-outlined mr-2">stop</span> Stop
+                        </button>
+</div>
+<div class="flex flex-col items-end">
+<div class="flex items-center space-x-2 mb-1">
+<span class="font-label-caps text-error">● REC</span>
+<span class="font-caption text-on-surface-variant">Recording ON</span>
+</div>
+<div class="font-data-lg text-on-surface-variant text-xs truncate max-w-[200px]" title="experiment_2026_08_25_120530.mp4">
+                            experiment_2026_08_25_120530.mp4
+                        </div>
+</div>
+</div>
+</section>
+<!-- Bottom Right: Mini Log -->
+<section class="col-span-3 row-span-2 bg-[#0c0e12] rounded-lg border border-outline-variant/30 p-3 flex flex-col font-data-lg text-xs">
+<div class="flex justify-between items-center mb-2 border-b border-outline-variant/30 pb-1">
+<h2 class="font-label-caps text-on-surface-variant uppercase text-[10px]">Terminal Log</h2>
+<span class="material-symbols-outlined text-[14px] text-on-surface-variant">terminal</span>
+</div>
+<div class="flex-1 overflow-hidden flex flex-col justify-end space-y-1 text-on-surface-variant opacity-80">
+<div class="flex hover:bg-surface-container-high px-1 rounded transition-colors">
+<span class="text-primary-fixed-dim mr-3 shrink-0">12:01:02</span>
+<span class="truncate">[SYS] Step 1 verification complete.</span>
+</div>
+<div class="flex hover:bg-surface-container-high px-1 rounded transition-colors">
+<span class="text-primary-fixed-dim mr-3 shrink-0">12:01:08</span>
+<span class="truncate">[SYS] Step 2 parameter check OK.</span>
+</div>
+<div class="flex hover:bg-surface-container-high px-1 rounded transition-colors bg-surface-container-high/50 text-on-surface">
+<span class="text-primary-fixed-dim mr-3 shrink-0">12:01:16</span>
+<span class="truncate">[AI_DET] Action: Handling Sample (94%)</span>
+</div>
+<div class="flex hover:bg-surface-container-high px-1 rounded transition-colors">
+<span class="text-primary-fixed-dim mr-3 shrink-0">12:01:25</span>
+<span class="truncate">[SYS] Stream latency: 12ms. Status: Nominal.</span>
+</div>
+<!-- Blinking cursor -->
+<div class="flex px-1 mt-1">
+<span class="text-primary-fixed-dim mr-3 shrink-0">&gt;</span>
+<span class="w-1.5 h-3 bg-on-surface-variant animate-pulse inline-block"></span>
+</div>
+</div>
+</section>
+</main>
+</div>
+<!-- Mobile BottomNav Fallback (Hidden on Desktop) -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-margin-page py-unit bg-surface-container-highest border-t border-outline-variant backdrop-blur-md shadow-lg h-20 md:hidden z-50">
+<a class="bg-secondary-container text-on-secondary-container rounded-xl p-stack-sm flex flex-col items-center scale-98 duration-100" href="#">
+<span class="material-symbols-outlined">videocam</span>
+<span class="font-label-caps text-[10px] mt-1">Live Stream</span>
+</a>
+<a class="text-on-surface-variant flex flex-col items-center hover:bg-surface-bright transition-all p-stack-sm rounded-xl" href="#">
+<span class="material-symbols-outlined">fiber_manual_record</span>
+<span class="font-label-caps text-[10px] mt-1">Record</span>
+</a>
+<a class="text-on-surface-variant flex flex-col items-center hover:bg-surface-bright transition-all p-stack-sm rounded-xl" href="#">
+<span class="material-symbols-outlined">photo_camera</span>
+<span class="font-label-caps text-[10px] mt-1">Snapshot</span>
+</a>
+<a class="text-on-surface-variant flex flex-col items-center hover:bg-surface-bright transition-all p-stack-sm rounded-xl" href="#">
+<span class="material-symbols-outlined">podcasts</span>
+<span class="font-label-caps text-[10px] mt-1">Stream Status</span>
+</a>
+</nav>
+</body></html>
