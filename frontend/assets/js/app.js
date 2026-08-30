@@ -681,4 +681,31 @@ document.addEventListener('DOMContentLoaded', () => {
     renderProcedureSteps();
     updateStatusUI();
     setSourceStandby();
+
+    // --- View Navigation (Monitor / Experiments) ---
+    const viewMonitor = document.getElementById('view-monitor');
+    const viewExperiments = document.getElementById('view-experiments');
+    const navMonitor = document.getElementById('nav-monitor');
+    const navExperiments = document.getElementById('nav-experiments');
+
+    function showView(view) {
+        if (view === 'experiments') {
+            viewMonitor.classList.add('hidden');
+            viewExperiments.classList.remove('hidden');
+            navExperiments.classList.add('nav-tab-active');
+            navExperiments.classList.remove('nav-tab');
+            navMonitor.classList.remove('nav-tab-active');
+            navMonitor.classList.add('nav-tab');
+        } else {
+            viewExperiments.classList.add('hidden');
+            viewMonitor.classList.remove('hidden');
+            navMonitor.classList.add('nav-tab-active');
+            navMonitor.classList.remove('nav-tab');
+            navExperiments.classList.remove('nav-tab-active');
+            navExperiments.classList.add('nav-tab');
+        }
+    }
+
+    if (navMonitor) navMonitor.addEventListener('click', () => showView('monitor'));
+    if (navExperiments) navExperiments.addEventListener('click', () => showView('experiments'));
 });

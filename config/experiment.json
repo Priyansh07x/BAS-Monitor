@@ -1,0 +1,12 @@
+{
+  "name": "Sample Experiment - Placeholder",
+  "version": "0.1",
+  "note": "Step IDs/actions here are placeholders. Part 1 team will finalize real experiment steps once the sample experiment is chosen. Backend/GUI logic must not hardcode assumptions beyond this schema.",
+  "steps": [
+    { "id": "S1", "action": "PICK_RED",   "description": "Pick up red sample" },
+    { "id": "S2", "action": "PLACE_RED",  "description": "Place red sample in container" },
+    { "id": "S3", "action": "PICK_BLUE",  "description": "Pick up blue sample" },
+    { "id": "S4", "action": "PLACE_BLUE", "description": "Place blue sample in container" },
+    { "id": "S5", "action": "CLOSE_LID",  "description": "Close the container lid" }
+  ]
+}
