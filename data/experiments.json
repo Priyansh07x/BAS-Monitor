@@ -1,0 +1,21 @@
+{
+  "experiments": [
+    {
+      "id": "exp_sample01",
+      "name": "Sample Processing",
+      "description": "Demo BAS procedure",
+      "steps": [
+        {
+          "id": 1,
+          "instruction": "Pick up the sample container",
+          "expected_action": "pick_up_sample"
+        },
+        {
+          "id": 2,
+          "instruction": "Place the sample on the work surface",
+          "expected_action": "place_sample"
+        }
+      ]
+    }
+  ]
+}
