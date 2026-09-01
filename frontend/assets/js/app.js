@@ -1150,22 +1150,87 @@ function deleteExperiment(experimentId) {
     }
 
     function startSimulationLoop() {
-        clearInterval(state.analysisInterval);
-        state.analysisInterval = setInterval(() => {
-            if (!state.isAnalyzing || state.isPaused) return;
+    clearInterval(state.analysisInterval);
 
-            // Random slight variance in confidence
-            state.confidence = Math.min(99, Math.max(88, Math.floor(92 + Math.random() * 7)));
-            
-            const currentStep = experimentSteps[state.currentStepIndex];
-            if (elements.aiActionText) {
-                elements.aiActionText.textContent = `Action: ${currentStep.expectedAction}`;
+    state.analysisInterval = setInterval(() => {
+        if (!state.isAnalyzing || state.isPaused) return;
+
+        // Simulated confidence variation
+        state.confidence = Math.min(
+            99,
+            Math.max(88, Math.floor(92 + Math.random() * 7))
+        );
+
+        const currentStep = experimentSteps[state.currentStepIndex];
+
+        if (!currentStep) {
+            stopAnalysis();
+            return;
+        }
+
+        // Simulated detected action
+        if (elements.aiActionText) {
+            elements.aiActionText.textContent =
+                `Action: ${currentStep.expectedAction}`;
+        }
+
+        updateStatusUI();
+
+        // Simulate successful validation of the current step
+        if (state.confidence >= 95) {
+
+            log(
+                `Step ${currentStep.id} validated: ${currentStep.title}`,
+                "AI"
+            );
+
+            speakVoice(
+                `Step ${currentStep.id} validated.`
+            );
+
+            if (state.currentStepIndex < experimentSteps.length - 1) {
+
+                state.currentStepIndex++;
+
+                state.validationState = 'VALID';
+
+                log(
+                    `Advancing to Step ${state.currentStepIndex + 1}.`,
+                    "SYS"
+                );
+
+                speakVoice(
+                    `Moving to Step ${state.currentStepIndex + 1}.`
+                );
+
+                renderProcedureSteps();
+                updateStatusUI();
+
+            } else {
+
+                log(
+                    "All experiment steps successfully validated.",
+                    "AI"
+                );
+
+                speakVoice(
+                    "Experiment procedure complete."
+                );
+
+                state.isAnalyzing = false;
+
+                clearInterval(state.analysisInterval);
+
+                if (elements.aiDetectionOverlay) {
+                    elements.aiDetectionOverlay.classList.add('hidden');
+                }
+
+                updateStatusUI();
             }
+        }
 
-            updateStatusUI();
-        }, 3000);
-    }
-
+    }, 3000);
+}
     // Attach Main Controls
    if (elements.btnStartAnalysis) {
     elements.btnStartAnalysis.addEventListener('click', () => {
