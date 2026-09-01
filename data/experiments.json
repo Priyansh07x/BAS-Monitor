@@ -1,19 +1,29 @@
 {
   "experiments": [
     {
-      "id": "exp_sample01",
-      "name": "Sample Processing",
-      "description": "Demo BAS procedure",
+      "id": "exp_c7bcc04d",
+      "name": "Test Experiment updated",
+      "description": "Testing experiment creation",
       "steps": [
         {
           "id": 1,
-          "instruction": "Pick up the sample container",
-          "expected_action": "pick_up_sample"
+          "instruction": "Collect sample",
+          "expected_action": ""
         },
         {
           "id": 2,
-          "instruction": "Place the sample on the work surface",
-          "expected_action": "place_sample"
+          "instruction": "Transfer sample",
+          "expected_action": ""
+        },
+        {
+          "id": 3,
+          "instruction": "Analyze sample",
+          "expected_action": ""
+        },
+        {
+          "id": 4,
+          "instruction": "Store sample",
+          "expected_action": ""
         }
       ]
     }
