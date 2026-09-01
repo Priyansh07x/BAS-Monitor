@@ -1167,11 +1167,39 @@ function deleteExperiment(experimentId) {
     }
 
     // Attach Main Controls
-    if (elements.btnStartAnalysis) elements.btnStartAnalysis.addEventListener('click', startAnalysis);
-    if (elements.btnPauseAnalysis) elements.btnPauseAnalysis.addEventListener('click', pauseAnalysis);
-    if (elements.btnStopAnalysis) elements.btnStopAnalysis.addEventListener('click', stopAnalysis);
-    if (elements.btnResetSeq) elements.btnResetSeq.addEventListener('click', resetSequence);
+   if (elements.btnStartAnalysis) {
+    elements.btnStartAnalysis.addEventListener('click', () => {
+        startAnalysis();
 
+        if (backend) {
+            backend.startMonitoring();
+        }
+    });
+}
+
+if (elements.btnPauseAnalysis) {
+    elements.btnPauseAnalysis.addEventListener('click', () => {
+        pauseAnalysis();
+
+        if (backend) {
+            backend.pauseMonitoring();
+        }
+    });
+}
+
+if (elements.btnStopAnalysis) {
+    elements.btnStopAnalysis.addEventListener('click', () => {
+        stopAnalysis();
+
+        if (backend) {
+            backend.stopMonitoring();
+        }
+    });
+}
+
+if (elements.btnResetSeq) {
+    elements.btnResetSeq.addEventListener('click', resetSequence);
+}
     // Initial render
     renderProcedureSteps();
     updateStatusUI();
