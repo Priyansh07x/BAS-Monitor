@@ -15,12 +15,34 @@ new QWebChannel(qt.webChannelTransport, function(channel) {
 
     loadExperiments();
 
-    // Test real Python/OpenCV camera
     backend.startCamera(function(success) {
         console.log("Python camera started:", success);
 
         if (success) {
+            state.inputSource = 'camera';
+
+            if (elements.videoElement) {
+                elements.videoElement.classList.remove('hidden');
+            }
+
+            if (elements.videoPlaceholder) {
+                elements.videoPlaceholder.classList.add('hidden');
+            }
+
+            if (elements.videoSourceText) {
+                elements.videoSourceText.textContent =
+                    "Source: Python/OpenCV Camera";
+            }
+
+            if (elements.outputActiveFilename) {
+                elements.outputActiveFilename.textContent =
+                    "Source: Python/OpenCV Camera";
+            }
+
+            updateStatusUI();
             startPythonCameraFeed();
+        } else {
+            console.error("Python camera could not be started.");
         }
     });
 });
