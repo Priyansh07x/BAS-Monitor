@@ -11,6 +11,7 @@ from PySide6.QtCore import QObject, Slot, Signal
 
 from . import experiment_manager
 from .app_state import AppState
+from .video.camera import Camera
 
 
 class Bridge(QObject):
@@ -19,6 +20,7 @@ class Bridge(QObject):
     def __init__(self, app_state: AppState):
         super().__init__()
         self.state = app_state
+        self.camera = Camera()
 
     @Slot(result=str)
     def getExperiments(self):
@@ -69,15 +71,51 @@ class Bridge(QObject):
         self._emit_state()
         return json.dumps({"success": True, "experiment": exp})
 
+    @Slot(result=bool)
+    def startCamera(self):
+        success = self.camera.open()
+
+        if success:
+            self.state.set_video_source("camera")
+            self._emit_state()
+
+        return success
+
+    @Slot(result=bool)
+    def cameraIsOpen(self):
+        return self.camera.is_open()
+    @Slot(result=str)
+    def getCameraFrame(self):
+        frame = self.camera.read()
+
+        if frame is None:
+            return ""
+
+        import cv2
+        import base64
+
+        success, buffer = cv2.imencode(".jpg", frame)
+
+        if not success:
+            return ""
+
+        return base64.b64encode(buffer).decode("utf-8")
+
+    @Slot()
+    def stopCamera(self):
+        self.camera.release()
+        self.state.set_video_source(None)
+        self._emit_state()
     @Slot(str)
     def selectVideoSource(self, source):
         self.state.set_video_source(source)
         self._emit_state()
 
+
     @Slot(result=str)
     def getState(self):
         return json.dumps(self.state.to_dict())
-
+    
     @Slot()
     def startMonitoring(self):
         self.state.start_monitoring()

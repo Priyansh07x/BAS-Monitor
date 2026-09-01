@@ -4,7 +4,7 @@ app_state.py -- Runtime application state.
 This is NOT saved to disk. It resets every time the app restarts.
 Permanent data (experiments) lives in experiments.json via storage.py.
 """
-
+from .video.camera import Camera
 
 class AppState:
     def __init__(self):
@@ -13,6 +13,7 @@ class AppState:
         self.monitoring_status = "IDLE"
         self.selected_video_source = None
         self.selected_video_path = None
+        self.camera = Camera()
 
     def reset_monitoring(self):
         self.current_step_index = 0
@@ -37,6 +38,14 @@ class AppState:
     def set_video_source(self, source, path=None):
         self.selected_video_source = source
         self.selected_video_path = path
+    def start_camera(self):
+        return self.camera.open()
+
+    def read_camera_frame(self):
+        return self.camera.read()
+
+    def stop_camera(self):
+        self.camera.release()
 
     def to_dict(self):
         return {

@@ -8,13 +8,51 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Python Backend Connection ---
     let backend = null;
 
-    new QWebChannel(qt.webChannelTransport, function(channel) {
-        backend = channel.objects.backend;
+new QWebChannel(qt.webChannelTransport, function(channel) {
+    backend = channel.objects.backend;
 
-        console.log("Python backend connected successfully.");
+    console.log("Python backend connected successfully.");
 
-        loadExperiments();
+    loadExperiments();
+
+    // Test real Python/OpenCV camera
+    backend.startCamera(function(success) {
+        console.log("Python camera started:", success);
+
+        if (success) {
+            startPythonCameraFeed();
+        }
     });
+});
+function startPythonCameraFeed() {
+    console.log("Starting Python camera feed...");
+
+    setInterval(() => {
+        if (!backend) return;
+
+        backend.getCameraFrame(function(base64Frame) {
+            if (!base64Frame) return;
+
+            if (elements.pythonCameraFeed) {
+                elements.pythonCameraFeed.src =
+                    "data:image/jpeg;base64," + base64Frame;
+
+                elements.pythonCameraFeed.classList.remove('hidden');
+            }
+
+            if (elements.videoElement) {
+                elements.videoElement.classList.add('hidden');
+            }
+
+            if (elements.videoPlaceholder) {
+                elements.videoPlaceholder.classList.add('hidden');
+            }
+
+            state.inputSource = 'camera';
+            updateStatusUI();
+        });
+    }, 100);
+}
 
 
     // =========================================================
@@ -498,6 +536,7 @@ function deleteExperiment(experimentId) {
     const elements = {
         currentTime: document.getElementById('current-time'),
         videoElement: document.getElementById('video-element'),
+        pythonCameraFeed: document.getElementById('python-camera-feed'),
         aiCanvas: document.getElementById('ai-canvas'),
         videoPlaceholder: document.getElementById('video-placeholder'),
         videoSourceText: document.getElementById('video-source-text'),
