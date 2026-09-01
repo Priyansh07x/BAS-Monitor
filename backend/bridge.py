@@ -20,7 +20,7 @@ class Bridge(QObject):
     def __init__(self, app_state: AppState):
         super().__init__()
         self.state = app_state
-        self.camera = Camera()
+        self.camera = self.state.camera
 
     @Slot(result=str)
     def getExperiments(self):
