@@ -318,6 +318,43 @@
 
     </main>
 
+    <!-- QWebChannel Bridge (Python ↔ JS IPC) -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script>
+        // Initialize the QWebChannel bridge to Python backend
+        window.backend = null;
+        if (typeof QWebChannel !== 'undefined') {
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                window.backend = channel.objects.backend;
+                console.log('[BAS] Python backend bridge connected.');
+
+                // Listen for Python → JS signals
+                if (window.backend) {
+                    window.backend.logMessage.connect(function(msg, type) {
+                        if (typeof window.basLog === 'function') {
+                            window.basLog(msg, type);
+                        }
+                    });
+                    window.backend.recordingStarted.connect(function(filename) {
+                        if (typeof window.basOnRecordingStarted === 'function') {
+                            window.basOnRecordingStarted(filename);
+                        }
+                    });
+                    window.backend.recordingStopped.connect(function(filepath) {
+                        if (typeof window.basOnRecordingStopped === 'function') {
+                            window.basOnRecordingStopped(filepath);
+                        }
+                    });
+                    window.backend.recTimerTick.connect(function(timeStr) {
+                        if (typeof window.basOnRecTimerTick === 'function') {
+                            window.basOnRecTimerTick(timeStr);
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+
     <!-- Core App Engine JavaScript -->
     <script src="assets/js/app.js"></script>
 </body>
