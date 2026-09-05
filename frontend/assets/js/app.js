@@ -946,23 +946,52 @@ function deleteExperiment(experimentId) {
     if (elements.btnToggleRec) {
         elements.btnToggleRec.addEventListener('click', () => {
             state.isRecording = !state.isRecording;
+            
             if (state.isRecording) {
-                elements.btnToggleRec.className = "flex items-center px-3 py-1 rounded border border-error/50 bg-error-container/30 text-error font-label-caps text-xs transition-colors animate-pulse";
-                elements.btnToggleRec.innerHTML = `<span class="w-2 h-2 rounded-full bg-error mr-1.5"></span> REC ON`;
-                if (elements.recStatusBadge) elements.recStatusBadge.classList.remove('hidden');
-                
+                _showRecUI();
                 startRecTimer();
                 log("Local video recording started (.mp4 output stream).", "SYS");
-            } else {
-                elements.btnToggleRec.className = "flex items-center px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:text-on-surface font-label-caps text-xs transition-colors";
-                elements.btnToggleRec.innerHTML = `<span class="w-2 h-2 rounded-full bg-outline-variant mr-1.5"></span> Record MP4`;
-                if (elements.recStatusBadge) elements.recStatusBadge.classList.add('hidden');
                 
+                if (window.backend) {
+                    window.backend.startRecording();
+                }
+            } else {
+                _hideRecUI();
                 stopRecTimer();
                 log("Local video recording saved.", "SYS");
+                
+                if (window.backend) {
+                    window.backend.stopRecording();
+                }
             }
             updateStatusUI();
         });
+    }
+
+    // --- Python backend signal handlers (called from bridge init in index.html) ---
+
+    // Expose log() so Python bridge signals can write to the terminal
+    window.basLog = function(message, type) {
+        log(message, type);
+    };
+
+    // Called every second by Python with "MM:SS" string
+    window.basOnRecTimerTick = function(timeStr) {
+        if (elements.recTimerDisplay) elements.recTimerDisplay.textContent = timeStr;
+    };
+
+    // Helper: show recording UI state
+    function _showRecUI() {
+        elements.btnToggleRec.className = "flex items-center px-3 py-1 rounded border border-error/50 bg-error-container/30 text-error font-label-caps text-xs transition-colors animate-pulse";
+        elements.btnToggleRec.innerHTML = `<span class="w-2 h-2 rounded-full bg-error mr-1.5"></span> REC ON`;
+        if (elements.recStatusBadge) elements.recStatusBadge.classList.remove('hidden');
+    }
+
+    // Helper: hide recording UI state
+    function _hideRecUI() {
+        elements.btnToggleRec.className = "flex items-center px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:text-on-surface font-label-caps text-xs transition-colors";
+        elements.btnToggleRec.innerHTML = `<span class="w-2 h-2 rounded-full bg-outline-variant mr-1.5"></span> Record MP4`;
+        if (elements.recStatusBadge) elements.recStatusBadge.classList.add('hidden');
     }
 
     function startRecTimer() {
