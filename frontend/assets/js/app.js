@@ -643,9 +643,9 @@ function deleteExperiment(experimentId) {
         const entry = document.createElement('div');
         entry.className = 'flex items-start font-mono leading-tight hover:bg-surface-container-high/40 px-1 py-0.5 rounded transition-colors';
         
-        let typeColor = 'text-primary-fixed-dim';
-        if (type === 'AI') typeColor = 'text-tertiary-fixed-dim';
-        if (type === 'WARN') typeColor = 'text-secondary-fixed-dim';
+        let typeColor = 'text-primary';
+        if (type === 'AI') typeColor = 'text-tertiary';
+        if (type === 'WARN') typeColor = 'text-secondary';
         if (type === 'ERR') typeColor = 'text-error';
         if (type === 'STREAM') typeColor = 'text-primary';
 
