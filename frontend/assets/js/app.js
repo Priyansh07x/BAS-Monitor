@@ -1025,13 +1025,29 @@ function deleteExperiment(experimentId) {
         elements.btnToggleStream.addEventListener('click', () => {
             state.isStreaming = !state.isStreaming;
             if (state.isStreaming) {
-                elements.btnToggleStream.className = "flex items-center px-3 py-1 rounded border border-tertiary-fixed/40 bg-tertiary-container/20 text-tertiary-fixed font-label-caps text-xs transition-colors";
-                elements.btnToggleStream.innerHTML = `<span class="material-symbols-outlined text-[14px] mr-1">podcasts</span> Streaming ON`;
-                log(`RTSP IP Stream active at: ${state.ipStreamUrl}`, "STREAM");
+                if (backend) {
+                    backend.startStreaming(function(url) {
+                        if (url) {
+                            state.ipStreamUrl = url;
+                            if (elements.streamInfoText) {
+                                elements.streamInfoText.textContent = `Stream Target: ${url}`;
+                            }
+                            elements.btnToggleStream.className = "flex items-center px-3 py-1 rounded border border-tertiary-fixed/40 bg-tertiary-container/20 text-tertiary font-label-caps text-xs transition-colors";
+                            elements.btnToggleStream.innerHTML = `<span class="material-symbols-outlined text-[14px] mr-1">podcasts</span> Streaming ON`;
+                        } else {
+                            state.isStreaming = false; // Failed to start
+                        }
+                    });
+                }
             } else {
+                if (backend) {
+                    backend.stopStreaming();
+                }
                 elements.btnToggleStream.className = "flex items-center px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:text-on-surface font-label-caps text-xs transition-colors";
                 elements.btnToggleStream.innerHTML = `<span class="material-symbols-outlined text-[14px] mr-1">podcasts</span> IP Stream`;
-                log("RTSP IP Stream stopped.", "STREAM");
+                if (elements.streamInfoText) {
+                    elements.streamInfoText.textContent = `Stream Target: Offline`;
+                }
             }
             updateStatusUI();
         });

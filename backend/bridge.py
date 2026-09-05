@@ -14,6 +14,7 @@ from . import experiment_manager
 from .app_state import AppState
 from .video.camera import Camera
 from .video.recorder import VideoRecorder
+from .network.streamer import get_ip_streamer
 from .logging.system_logger import get_system_logger
 
 
@@ -22,6 +23,11 @@ class Bridge(QObject):
     # Recording signals
     recordingStarted = Signal(str)
     recordingStopped = Signal(str)
+    
+    # Streaming signals
+    streamStarted = Signal(str)
+    streamStopped = Signal()
+    
     logMessage = Signal(str, str)
     recTimerTick = Signal(str)
 
@@ -29,9 +35,10 @@ class Bridge(QObject):
         super().__init__()
         self.state = app_state
         self.camera = self.state.camera
-        # Recording support
+        # Recording & Streaming support
         self._slog = get_system_logger()
         self._recorder = VideoRecorder()
+        self._streamer = get_ip_streamer()
         self._rec_seconds = 0
         self._rec_timer = None
 
@@ -214,10 +221,49 @@ class Bridge(QObject):
         self.recTimerTick.emit(f"{mins:02d}:{secs:02d}")
 
     # ================================================================== #
+    #  IP STREAMING
+    # ================================================================== #
+
+    @Slot(result=str)
+    def startStreaming(self):
+        """Start the MJPEG HTTP IP stream."""
+        if self._streamer.is_running:
+            url = f"http://{self._streamer.get_local_ip()}:{self._streamer.port}/stream"
+            self.logMessage.emit("Streaming already active.", "WARN")
+            return url
+
+        if not self.camera.is_open():
+            self.startCamera()
+            if not self.camera.is_open():
+                self.logMessage.emit("Cannot stream: camera not available.", "ERR")
+                return ""
+
+        url = self._streamer.start()
+        self._slog.info(f"IP Streaming started at {url}")
+        self.logMessage.emit(f"HTTP MJPEG Stream active at: {url}", "STREAM")
+        self.streamStarted.emit(url)
+        return url
+
+    @Slot()
+    def stopStreaming(self):
+        """Stop the IP stream."""
+        if not self._streamer.is_running:
+            return
+            
+        self._streamer.stop()
+        self._slog.info("IP Streaming stopped.")
+        self.logMessage.emit("HTTP MJPEG Stream stopped.", "STREAM")
+        self.streamStopped.emit()
+
+    @Slot(result=bool)
+    def isStreaming(self) -> bool:
+        return self._streamer.is_running
+
+    # ================================================================== #
     #  FRAME FEED (hook into upstream getCameraFrame)
     # ================================================================== #
 
-    # Override getCameraFrame to also feed frames to the recorder
+    # Override getCameraFrame to also feed frames to the recorder/streamer
     @Slot(result=str)
     def getCameraFrame(self):
         frame = self.camera.read()
@@ -228,6 +274,10 @@ class Bridge(QObject):
         # Feed frame to recorder if recording is active
         if self._recorder.is_recording:
             self._recorder.enqueue_frame(frame)
+            
+        # Feed frame to IP streamer if active
+        if self._streamer.is_running:
+            self._streamer.update_frame(frame)
 
         import base64
         success, buffer = cv2.imencode(".jpg", frame)
@@ -243,5 +293,7 @@ class Bridge(QObject):
         """Release all resources on app exit."""
         if self._recorder.is_recording:
             self.stopRecording()
+        if self._streamer.is_running:
+            self.stopStreaming()
         self.stopCamera()
         self._recorder.shutdown()
