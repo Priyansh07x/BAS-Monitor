@@ -150,8 +150,8 @@ class Bridge(QObject):
                 return
 
         try:
-            # Force standard 720p broadcast resolution for QuickTime compatibility
-            fps = 30.0
+            # Match 10fps polling rate from frontend (100ms interval)
+            fps = 10.0
             w, h = 1280, 720
 
             filepath = self._recorder.start_recording(

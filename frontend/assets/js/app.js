@@ -13,6 +13,18 @@ new QWebChannel(qt.webChannelTransport, function(channel) {
 
     console.log("Python backend connected successfully.");
 
+    if (backend.logMessage) {
+        backend.logMessage.connect(function(msg, type) {
+            window.basLog(msg, type);
+        });
+    }
+
+    if (backend.recTimerTick) {
+        backend.recTimerTick.connect(function(timeStr) {
+            window.basOnRecTimerTick(timeStr);
+        });
+    }
+
     loadExperiments();
 
     backend.startCamera(function(success) {
@@ -952,16 +964,16 @@ function deleteExperiment(experimentId) {
                 startRecTimer();
                 log("Local video recording started (.mp4 output stream).", "SYS");
                 
-                if (window.backend) {
-                    window.backend.startRecording();
+                if (backend) {
+                    backend.startRecording();
                 }
             } else {
                 _hideRecUI();
                 stopRecTimer();
                 log("Local video recording saved.", "SYS");
                 
-                if (window.backend) {
-                    window.backend.stopRecording();
+                if (backend) {
+                    backend.stopRecording();
                 }
             }
             updateStatusUI();
