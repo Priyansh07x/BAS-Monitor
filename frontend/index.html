@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/fonts.css">
     <link rel="stylesheet" href="assets/css/outlined.css">
+    <link rel="stylesheet" href="assets/css/theme-overrides.css">
     <style>
         .ghost-border {
             border: 1px solid #3b494c;
@@ -39,6 +40,11 @@
                 </p>
             </div>
         </div>
+        <!-- View Navigation -->
+        <nav class="flex items-center gap-1 bg-surface-container-low rounded p-1 ghost-border">
+            <button id="nav-monitor" class="nav-tab-active px-3 py-1.5 rounded font-label-caps text-xs transition-colors">Monitor</button>
+            <button id="nav-experiments" class="nav-tab px-3 py-1.5 rounded font-label-caps text-xs transition-colors hover:text-on-surface">Experiments</button>
+        </nav>
 
         <!-- Realtime Telemetry & Global Controls -->
         <div class="flex items-center gap-4">
@@ -59,6 +65,9 @@
                 <button id="btn-header-voice" title="Toggle Voice Guidance" class="p-1.5 text-on-surface-variant hover:text-primary-fixed-dim hover:bg-surface-container-high transition-colors rounded">
                     <span class="material-symbols-outlined text-[18px]">volume_up</span>
                 </button>
+                <button id="btn-theme-toggle" title="Toggle Dark / Light Mode" class="p-1.5 text-on-surface-variant hover:text-primary-fixed-dim hover:bg-surface-container-high transition-colors rounded">
+                    <span class="material-symbols-outlined text-[18px]">dark_mode</span>
+                </button>
             </div>
         </div>
     </header>
@@ -66,7 +75,7 @@
     <!-- Main Dashboard Grid: Structure according to target layout -->
     <!-- Top Row: PROCEDURE | VIDEO FEED | STATUS -->
     <!-- Bottom Row: TERMINAL LOG | CONTROLS (spans Video + Status) -->
-    <main class="flex-1 min-h-0 p-4 grid grid-cols-[280px_minmax(0,1fr)_320px] grid-rows-[minmax(0,1fr)_210px] gap-4 overflow-hidden bg-surface-dim">
+    <main id="view-monitor" class="flex-1 min-h-0 p-4 grid grid-cols-[280px_minmax(0,1fr)_320px] grid-rows-[minmax(0,1fr)_210px] gap-4 overflow-hidden bg-surface-dim">
 
         <!-- ================= TOP LEFT: PROCEDURE SEQUENCE ================= -->
         <section class="min-h-0 bg-surface-container rounded-lg ghost-border p-4 flex flex-col overflow-hidden">
@@ -113,6 +122,12 @@
             <div id="video-viewport" class="flex-1 min-h-0 w-full relative flex items-center justify-center bg-black">
                 <!-- Real HTML5 Video element -->
                 <video id="video-element" class="hidden w-full h-full object-contain" playsinline muted></video>
+
+<img
+    id="python-camera-feed"
+    class="hidden w-full h-full object-contain"
+    alt="Python Camera Feed"
+/>
                 
                 <!-- Canvas for bounding boxes / AI HUD annotations -->
                 <canvas id="ai-canvas" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
@@ -317,44 +332,22 @@
         </section>
 
     </main>
+    <!-- ================= EXPERIMENTS VIEW (hidden by default) ================= -->
+    <div id="view-experiments" class="hidden flex-1 min-h-0 p-6 overflow-y-auto bg-surface-dim">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="font-display-lg text-lg text-on-surface">Experiment Procedures</h2>
+            <button id="btn-new-experiment" class="flex items-center px-3 py-1.5 rounded bg-primary-fixed-dim text-on-primary-fixed font-label-caps text-xs">
+                <span class="material-symbols-outlined text-[16px] mr-1.5">add</span>
+                New Experiment
+            </button>
+        </div>
+        <div id="experiment-list" class="grid grid-cols-3 gap-4">
+            <p class="text-on-surface-variant text-sm col-span-3">No experiments loaded yet.</p>
+        </div>
+    </div>
 
-    <!-- QWebChannel Bridge (Python ↔ JS IPC) -->
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-    <script>
-        // Initialize the QWebChannel bridge to Python backend
-        window.backend = null;
-        if (typeof QWebChannel !== 'undefined') {
-            new QWebChannel(qt.webChannelTransport, function(channel) {
-                window.backend = channel.objects.backend;
-                console.log('[BAS] Python backend bridge connected.');
-
-                // Listen for Python → JS signals
-                if (window.backend) {
-                    window.backend.logMessage.connect(function(msg, type) {
-                        if (typeof window.basLog === 'function') {
-                            window.basLog(msg, type);
-                        }
-                    });
-                    window.backend.recordingStarted.connect(function(filename) {
-                        if (typeof window.basOnRecordingStarted === 'function') {
-                            window.basOnRecordingStarted(filename);
-                        }
-                    });
-                    window.backend.recordingStopped.connect(function(filepath) {
-                        if (typeof window.basOnRecordingStopped === 'function') {
-                            window.basOnRecordingStopped(filepath);
-                        }
-                    });
-                    window.backend.recTimerTick.connect(function(timeStr) {
-                        if (typeof window.basOnRecTimerTick === 'function') {
-                            window.basOnRecTimerTick(timeStr);
-                        }
-                    });
-                }
-            });
-        }
-    </script>
-
+    <script src="assets/js/theme.js"></script>
     <!-- Core App Engine JavaScript -->
     <script src="assets/js/app.js"></script>
 </body>

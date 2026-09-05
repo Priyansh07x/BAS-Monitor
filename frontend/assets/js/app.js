@@ -4,6 +4,495 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    // --- Python Backend Connection ---
+    let backend = null;
+
+new QWebChannel(qt.webChannelTransport, function(channel) {
+    backend = channel.objects.backend;
+
+    console.log("Python backend connected successfully.");
+
+    loadExperiments();
+
+    backend.startCamera(function(success) {
+        console.log("Python camera started:", success);
+
+        if (success) {
+            state.inputSource = 'camera';
+
+            if (elements.videoElement) {
+                elements.videoElement.classList.remove('hidden');
+            }
+
+            if (elements.videoPlaceholder) {
+                elements.videoPlaceholder.classList.add('hidden');
+            }
+
+            if (elements.videoSourceText) {
+                elements.videoSourceText.textContent =
+                    "Source: Python/OpenCV Camera";
+            }
+
+            if (elements.outputActiveFilename) {
+                elements.outputActiveFilename.textContent =
+                    "Source: Python/OpenCV Camera";
+            }
+
+            updateStatusUI();
+            startPythonCameraFeed();
+        } else {
+            console.error("Python camera could not be started.");
+        }
+    });
+});
+function startPythonCameraFeed() {
+    console.log("Starting Python camera feed...");
+
+    setInterval(() => {
+        if (!backend) return;
+
+        backend.getCameraFrame(function(base64Frame) {
+            if (!base64Frame) return;
+
+            if (elements.pythonCameraFeed) {
+                elements.pythonCameraFeed.src =
+                    "data:image/jpeg;base64," + base64Frame;
+
+                elements.pythonCameraFeed.classList.remove('hidden');
+            }
+
+            if (elements.videoElement) {
+                elements.videoElement.classList.add('hidden');
+            }
+
+            if (elements.videoPlaceholder) {
+                elements.videoPlaceholder.classList.add('hidden');
+            }
+
+            state.inputSource = 'camera';
+            updateStatusUI();
+        });
+    }, 100);
+}
+
+
+    // =========================================================
+    // --- Experiment Management ---
+    // =========================================================
+
+    function loadExperiments() {
+        if (!backend) {
+            console.error("Backend not connected.");
+            return;
+        }
+
+        backend.getExperiments(function(result) {
+            try {
+                const experiments = JSON.parse(result);
+                console.log("Experiments received:", experiments);
+                renderExperiments(experiments);
+            } catch (error) {
+                console.error("Failed to parse experiments:", error);
+            }
+        });
+    }
+    // =========================================================
+// --- Create New Experiment ---
+// =========================================================
+
+const btnNewExperiment = document.getElementById('btn-new-experiment');
+
+if (btnNewExperiment) {
+    btnNewExperiment.addEventListener('click', () => {
+
+        if (!backend) {
+            console.error("Backend not connected.");
+            return;
+        }
+
+        const name = prompt("Enter experiment name:");
+
+        if (!name || !name.trim()) {
+            return;
+        }
+
+        const description = prompt(
+            "Enter experiment description:"
+        ) || "";
+
+        const stepsText = prompt(
+            "Enter experiment steps, one per line:"
+        ) || "";
+
+        const steps = stepsText
+            .split('\n')
+            .map(step => step.trim())
+            .filter(step => step.length > 0)
+            .map(step => ({
+                instruction: step,
+                expected_action: ""
+            }));
+
+        backend.createExperiment(
+    JSON.stringify({
+        name: name.trim(),
+        description: description.trim(),
+        steps: steps
+    }),
+    function(result) {
+
+                try {
+                    const response = JSON.parse(result);
+
+                    if (!response.success) {
+                        console.error(
+                            "Failed to create experiment:",
+                            response.error
+                        );
+                        alert(
+                            "Failed to create experiment: " +
+                            response.error
+                        );
+                        return;
+                    }
+
+                    console.log(
+                        "Experiment created:",
+                        response.experiment
+                    );
+
+                    alert("Experiment created successfully!");
+
+                    // Refresh experiment cards
+                    loadExperiments();
+
+                } catch (error) {
+                    console.error(
+                        "Failed to parse create response:",
+                        error
+                    );
+                }
+            }
+        );
+    });
+}
+
+    function renderExperiments(experiments) {
+    const list = document.getElementById('experiment-list');
+
+    if (!list) return;
+
+    list.innerHTML = '';
+
+    if (!experiments || experiments.length === 0) {
+        list.innerHTML = `
+            <p class="text-on-surface-variant text-sm col-span-3">
+                No experiments found.
+            </p>
+        `;
+        return;
+    }
+
+    experiments.forEach((experiment) => {
+        const card = document.createElement('div');
+
+        card.className =
+            'bg-surface-container rounded-lg ghost-border p-4 flex flex-col gap-3';
+
+        const stepCount = experiment.steps
+            ? experiment.steps.length
+            : 0;
+
+        card.innerHTML = `
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-label-caps text-[10px] text-primary-fixed-dim">
+                        ${escapeHtml(experiment.id)}
+                    </span>
+
+                    <span class="font-label-caps text-[10px] text-on-surface-variant">
+                        ${stepCount} steps
+                    </span>
+                </div>
+
+                <h3 class="font-data-lg text-on-surface text-sm font-semibold">
+                    ${escapeHtml(experiment.name)}
+                </h3>
+
+                <p class="font-caption text-on-surface-variant text-xs mt-1">
+                    ${escapeHtml(
+                        experiment.description || 'No description'
+                    )}
+                </p>
+            </div>
+
+            <div class="flex justify-end gap-2">
+
+    <button
+        class="load-experiment-btn px-3 py-1.5 rounded
+               bg-primary-fixed-dim text-on-primary-fixed
+               font-label-caps text-xs"
+        data-id="${escapeHtml(experiment.id)}">
+        Load
+    </button>
+
+    <button
+        class="edit-experiment-btn px-3 py-1.5 rounded
+               border border-outline-variant
+               text-on-surface font-label-caps text-xs"
+        data-id="${escapeHtml(experiment.id)}">
+        Edit
+    </button>
+
+    <button
+        class="delete-experiment-btn px-3 py-1.5 rounded
+               border border-error/40 text-error
+               font-label-caps text-xs"
+        data-id="${escapeHtml(experiment.id)}">
+        Delete
+    </button>
+
+</div>
+        `;
+
+        list.appendChild(card);
+    });
+
+    // Connect every Load Experiment button
+    document.querySelectorAll('.load-experiment-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            const experimentId = button.dataset.id;
+            loadExperiment(experimentId);
+        });
+    });
+    // Edit buttons
+document.querySelectorAll('.edit-experiment-btn').forEach(button => {
+    button.addEventListener('click', () => {
+        const experimentId = button.dataset.id;
+        editExperiment(experimentId);
+    });
+});
+
+
+// Delete buttons
+document.querySelectorAll('.delete-experiment-btn').forEach(button => {
+    button.addEventListener('click', () => {
+        const experimentId = button.dataset.id;
+        deleteExperiment(experimentId);
+    });
+});
+}
+function loadExperiment(experimentId) {
+    if (!backend) {
+        console.error("Backend not connected.");
+        return;
+    }
+
+    console.log("Loading experiment:", experimentId);
+
+    backend.loadExperiment(experimentId, function(result) {
+        try {
+            const response = JSON.parse(result);
+
+            if (!response.success) {
+                console.error(
+                    "Failed to load experiment:",
+                    response.error
+                );
+                return;
+            }
+
+            const experiment = response.experiment;
+
+            console.log("Experiment loaded:", experiment);
+
+            // Convert Python experiment steps
+            // into the format used by the Monitor.
+            if (experiment.steps && experiment.steps.length > 0) {
+                experimentSteps.length = 0;
+
+                experiment.steps.forEach((step, index) => {
+                    experimentSteps.push({
+                        id: index + 1,
+                        title: step.instruction,
+                        desc: step.instruction,
+                        expectedAction: step.expected_action || "",
+                        durationEst: ""
+                    });
+                });
+            }
+
+            // Start from Step 1
+            state.currentStepIndex = 0;
+            state.confidence = 96;
+            state.validationState = 'VALID';
+
+            // Update Monitor
+            renderProcedureSteps();
+            updateStatusUI();
+
+            // Go back to Monitor
+            showView('monitor');
+
+            log(
+                `Experiment loaded: ${experiment.name}`,
+                "SYS"
+            );
+
+            speakVoice(
+                `Experiment ${experiment.name} loaded.`
+            );
+
+        } catch (error) {
+            console.error(
+                "Failed to parse experiment response:",
+                error
+            );
+        }
+    });
+}
+function editExperiment(experimentId) {
+    if (!backend) {
+        console.error("Backend not connected.");
+        return;
+    }
+
+    backend.getExperiment(
+        experimentId,
+        function(result) {
+
+            try {
+                const experiment = JSON.parse(result);
+
+                if (!experiment) {
+                    alert("Experiment not found.");
+                    return;
+                }
+
+                const newName = prompt(
+                    "Enter new experiment name:",
+                    experiment.name
+                );
+
+                if (newName === null) {
+                    return;
+                }
+
+                const newDescription = prompt(
+                    "Enter new description:",
+                    experiment.description || ""
+                );
+
+                if (newDescription === null) {
+                    return;
+                }
+
+                const updatedSteps = prompt(
+                    "Enter steps, one per line:",
+                    (experiment.steps || [])
+                        .map(step => step.instruction)
+                        .join('\n')
+                );
+
+                if (updatedSteps === null) {
+                    return;
+                }
+
+                const steps = updatedSteps
+                    .split('\n')
+                    .map(step => step.trim())
+                    .filter(step => step.length > 0)
+                    .map(step => ({
+                        instruction: step,
+                        expected_action: ""
+                    }));
+
+                const payload = {
+                    name: newName.trim(),
+                    description: newDescription.trim(),
+                    steps: steps
+                };
+
+                backend.saveExperiment(
+                    experimentId,
+                    JSON.stringify(payload),
+                    function(saveResult) {
+
+                        try {
+                            const response = JSON.parse(saveResult);
+
+                            if (!response.success) {
+                                alert(
+                                    "Failed to update experiment: " +
+                                    response.error
+                                );
+                                return;
+                            }
+
+                            console.log(
+                                "Experiment updated:",
+                                response.experiment
+                            );
+
+                            alert(
+                                "Experiment updated successfully!"
+                            );
+
+                            loadExperiments();
+
+                        } catch (error) {
+                            console.error(
+                                "Failed to parse update response:",
+                                error
+                            );
+                        }
+                    }
+                );
+
+            } catch (error) {
+                console.error(
+                    "Failed to parse experiment:",
+                    error
+                );
+            }
+        }
+    );
+}
+function deleteExperiment(experimentId) {
+    if (!backend) {
+        console.error("Backend not connected.");
+        return;
+    }
+
+    const confirmed = confirm(
+        "Are you sure you want to delete this experiment?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    console.log("Deleting experiment:", experimentId);
+
+    backend.deleteExperiment(
+        experimentId,
+        function(success) {
+
+            console.log("Delete result:", success);
+
+            if (success) {
+                alert("Experiment deleted successfully!");
+                loadExperiments();
+            } else {
+                alert("Failed to delete experiment.");
+            }
+        }
+    );
+}
+
+
+
     // --- Application State ---
     const state = {
         isAnalyzing: false,
@@ -69,6 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const elements = {
         currentTime: document.getElementById('current-time'),
         videoElement: document.getElementById('video-element'),
+        pythonCameraFeed: document.getElementById('python-camera-feed'),
         aiCanvas: document.getElementById('ai-canvas'),
         videoPlaceholder: document.getElementById('video-placeholder'),
         videoSourceText: document.getElementById('video-source-text'),
@@ -158,8 +648,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function escapeHtml(str) {
-        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
+    return String(str ?? '')
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
     // Initial Logs
     log("BAS Experiment Monitor initializing...", "SYS");
@@ -684,30 +1179,150 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startSimulationLoop() {
-        clearInterval(state.analysisInterval);
-        state.analysisInterval = setInterval(() => {
-            if (!state.isAnalyzing || state.isPaused) return;
+    clearInterval(state.analysisInterval);
 
-            // Random slight variance in confidence
-            state.confidence = Math.min(99, Math.max(88, Math.floor(92 + Math.random() * 7)));
-            
-            const currentStep = experimentSteps[state.currentStepIndex];
-            if (elements.aiActionText) {
-                elements.aiActionText.textContent = `Action: ${currentStep.expectedAction}`;
+    state.analysisInterval = setInterval(() => {
+        if (!state.isAnalyzing || state.isPaused) return;
+
+        // Simulated confidence variation
+        state.confidence = Math.min(
+            99,
+            Math.max(88, Math.floor(92 + Math.random() * 7))
+        );
+
+        const currentStep = experimentSteps[state.currentStepIndex];
+
+        if (!currentStep) {
+            stopAnalysis();
+            return;
+        }
+
+        // Simulated detected action
+        if (elements.aiActionText) {
+            elements.aiActionText.textContent =
+                `Action: ${currentStep.expectedAction}`;
+        }
+
+        updateStatusUI();
+
+        // Simulate successful validation of the current step
+        if (state.confidence >= 95) {
+
+            log(
+                `Step ${currentStep.id} validated: ${currentStep.title}`,
+                "AI"
+            );
+
+            speakVoice(
+                `Step ${currentStep.id} validated.`
+            );
+
+            if (state.currentStepIndex < experimentSteps.length - 1) {
+
+                state.currentStepIndex++;
+
+                state.validationState = 'VALID';
+
+                log(
+                    `Advancing to Step ${state.currentStepIndex + 1}.`,
+                    "SYS"
+                );
+
+                speakVoice(
+                    `Moving to Step ${state.currentStepIndex + 1}.`
+                );
+
+                renderProcedureSteps();
+                updateStatusUI();
+
+            } else {
+
+                log(
+                    "All experiment steps successfully validated.",
+                    "AI"
+                );
+
+                speakVoice(
+                    "Experiment procedure complete."
+                );
+
+                state.isAnalyzing = false;
+
+                clearInterval(state.analysisInterval);
+
+                if (elements.aiDetectionOverlay) {
+                    elements.aiDetectionOverlay.classList.add('hidden');
+                }
+
+                updateStatusUI();
             }
+        }
 
-            updateStatusUI();
-        }, 3000);
-    }
-
+    }, 3000);
+}
     // Attach Main Controls
-    if (elements.btnStartAnalysis) elements.btnStartAnalysis.addEventListener('click', startAnalysis);
-    if (elements.btnPauseAnalysis) elements.btnPauseAnalysis.addEventListener('click', pauseAnalysis);
-    if (elements.btnStopAnalysis) elements.btnStopAnalysis.addEventListener('click', stopAnalysis);
-    if (elements.btnResetSeq) elements.btnResetSeq.addEventListener('click', resetSequence);
+   if (elements.btnStartAnalysis) {
+    elements.btnStartAnalysis.addEventListener('click', () => {
+        startAnalysis();
 
+        if (backend) {
+            backend.startMonitoring();
+        }
+    });
+}
+
+if (elements.btnPauseAnalysis) {
+    elements.btnPauseAnalysis.addEventListener('click', () => {
+        pauseAnalysis();
+
+        if (backend) {
+            backend.pauseMonitoring();
+        }
+    });
+}
+
+if (elements.btnStopAnalysis) {
+    elements.btnStopAnalysis.addEventListener('click', () => {
+        stopAnalysis();
+
+        if (backend) {
+            backend.stopMonitoring();
+        }
+    });
+}
+
+if (elements.btnResetSeq) {
+    elements.btnResetSeq.addEventListener('click', resetSequence);
+}
     // Initial render
     renderProcedureSteps();
     updateStatusUI();
     setSourceStandby();
+
+    // --- View Navigation (Monitor / Experiments) ---
+    const viewMonitor = document.getElementById('view-monitor');
+    const viewExperiments = document.getElementById('view-experiments');
+    const navMonitor = document.getElementById('nav-monitor');
+    const navExperiments = document.getElementById('nav-experiments');
+
+    function showView(view) {
+        if (view === 'experiments') {
+            viewMonitor.classList.add('hidden');
+            viewExperiments.classList.remove('hidden');
+            navExperiments.classList.add('nav-tab-active');
+            navExperiments.classList.remove('nav-tab');
+            navMonitor.classList.remove('nav-tab-active');
+            navMonitor.classList.add('nav-tab');
+        } else {
+            viewExperiments.classList.add('hidden');
+            viewMonitor.classList.remove('hidden');
+            navMonitor.classList.add('nav-tab-active');
+            navMonitor.classList.remove('nav-tab');
+            navExperiments.classList.remove('nav-tab-active');
+            navExperiments.classList.add('nav-tab');
+        }
+    }
+
+    if (navMonitor) navMonitor.addEventListener('click', () => showView('monitor'));
+    if (navExperiments) navExperiments.addEventListener('click', () => showView('experiments'));
 });

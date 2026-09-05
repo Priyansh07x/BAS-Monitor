@@ -9,17 +9,22 @@ and connects the Python backend via QWebChannel.
 import sys
 from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent
+
+sys.path.insert(0, str(PROJECT_ROOT))
+
 from PySide6.QtCore import QUrl
+from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import QWebEnginePage
-from PySide6.QtWebChannel import QWebChannel
 
-from backend.bridge import BackendBridge
+from backend.bridge import Bridge
+from backend.app_state import AppState
 
 
-BASE_DIR = Path(__file__).resolve().parent
-INDEX_FILE = BASE_DIR / "frontend" / "index.html"
+INDEX_FILE = PROJECT_ROOT / "frontend" / "index.html"
 
 
 class CustomWebEnginePage(QWebEnginePage):
@@ -54,14 +59,17 @@ def main() -> int:
     window.setWindowTitle("BAS Experiment Monitor")
     window.resize(1600, 900)
 
-    # --- Browser + Custom Page ---
+    # --- Browser + Custom Page (grants camera permissions) ---
     browser = QWebEngineView()
     page = CustomWebEnginePage(browser)
     browser.setPage(page)
 
     # --- QWebChannel: expose Python backend to JS ---
+    app_state = AppState()
+
     channel = QWebChannel(page)
-    bridge = BackendBridge()
+    bridge = Bridge(app_state)
+
     channel.registerObject("backend", bridge)
     page.setWebChannel(channel)
 
