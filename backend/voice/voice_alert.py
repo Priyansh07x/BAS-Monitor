@@ -48,7 +48,12 @@ class VoiceAlertService:
 
     def _init_tts_engine(self) -> None:
         """Initialize the local speech engine with fallbacks."""
-        # 1. Try pyttsx3 first
+        # 1. On macOS, prefer native `say` command (reliable in threads)
+        if sys.platform == "darwin":
+            self._engine_type = "macos_say"
+            return
+
+        # 2. Try pyttsx3 on other platforms
         try:
             import pyttsx3
             engine = pyttsx3.init()
@@ -61,11 +66,6 @@ class VoiceAlertService:
             return
         except Exception:
             pass
-
-        # 2. Fallback to native macOS `say` command if running on Darwin
-        if sys.platform == "darwin":
-            self._engine_type = "macos_say"
-            return
 
         # 3. Headless/Mock fallback
         self._engine_type = "mock"

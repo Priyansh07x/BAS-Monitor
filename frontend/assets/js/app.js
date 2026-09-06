@@ -1313,8 +1313,10 @@ function deleteExperiment(experimentId) {
 
         updateStatusUI();
 
-        // Simulate successful validation of the current step
+        // --- Step Validation with Voice Announcements ---
         if (state.confidence >= 95) {
+            // SUCCESS: step validated
+            state.validationState = 'VALID';
 
             log(
                 `Step ${currentStep.id} validated: ${currentStep.title}`,
@@ -1322,24 +1324,22 @@ function deleteExperiment(experimentId) {
             );
 
             speakVoice(
-                `Step ${currentStep.id} success.`
+                `Step ${currentStep.id} complete. ${currentStep.title}.`
             );
 
             if (state.currentStepIndex < experimentSteps.length - 1) {
 
                 state.currentStepIndex++;
 
-                state.validationState = 'VALID';
-
                 const nextStep = experimentSteps[state.currentStepIndex];
 
                 log(
-                    `Advancing to Step ${state.currentStepIndex + 1}.`,
+                    `Advancing to Step ${nextStep.id}: ${nextStep.title}`,
                     "SYS"
                 );
 
                 speakVoice(
-                    `Next: Step ${nextStep.id}. ${nextStep.desc}`
+                    `Next, Step ${nextStep.id}. ${nextStep.desc}`
                 );
 
                 renderProcedureSteps();
@@ -1366,6 +1366,33 @@ function deleteExperiment(experimentId) {
 
                 updateStatusUI();
             }
+
+        } else if (state.confidence < 90) {
+            // FAILED: confidence too low
+            state.validationState = 'ERROR';
+
+            log(
+                `Step ${currentStep.id} failed: confidence ${state.confidence}% below threshold.`,
+                "ERR"
+            );
+
+            speakVoice(
+                `Step ${currentStep.id} failed. Please retry ${currentStep.title}.`,
+                true
+            );
+
+            updateStatusUI();
+
+        } else {
+            // WARNING: borderline confidence (90-94)
+            state.validationState = 'WARNING';
+
+            log(
+                `Step ${currentStep.id} uncertain: confidence ${state.confidence}%.`,
+                "WARN"
+            );
+
+            updateStatusUI();
         }
 
     }, 3000);
