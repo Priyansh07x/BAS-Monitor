@@ -11,19 +11,38 @@
    NOTE: This is a functional stub, not a full light design --
    DESIGN.md only defines the dark "Obsidian Control" palette.
    A real light palette is a separate design task, not part of Block 1. */
+html.light {
+  --color-background: #f4f5f7;
+  --color-surface: #ffffff;
+  --color-surface-dim: #f0f1f4;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #ffffff;
+  --color-surface-container: #ffffff;
+  --color-surface-container-high: #f7f8f9;
+  --color-surface-container-highest: #e3e4e8;
+  --color-on-surface: #1a1c20;
+  --color-on-surface-variant: #4b4f54;
+  --color-outline-variant: #e5e7eb;
+  --color-primary: #006875;
+  --color-secondary: #6a4800;
+  --color-tertiary: #006731;
+  --color-error: #ba1a1a;
+  
+  /* Override "fixed" colors so they adapt to light mode */
+  --color-primary-fixed: #006875;
+  --color-primary-fixed-dim: #005662;
+  --color-on-primary-fixed: #ffffff;
+  
+  --color-tertiary-fixed: #006731;
+  --color-tertiary-fixed-dim: #005226;
+  --color-on-tertiary-fixed: #ffffff;
+  
+  --color-secondary-fixed: #6a4800;
+  --color-secondary-fixed-dim: #503600;
+  --color-on-secondary-fixed: #ffffff;
+}
+
 html.light body {
-  background-color: #f4f5f7;
-  color: #1a1c20;
-}
-html.light header,
-html.light .bg-surface-container,
-html.light .bg-surface-container-low,
-html.light .bg-surface-container-high,
-html.light .bg-surface-container-lowest,
-html.light .bg-surface-dim {
-  background-color: #ffffff !important;
-  color: #1a1c20 !important;
-}
-html.light .text-on-surface-variant {
-  color: #4b4f54 !important;
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
 }
