@@ -13,9 +13,15 @@ new QWebChannel(qt.webChannelTransport, function(channel) {
 
     console.log("Python backend connected successfully.");
 
+    // Send Initial UI startup Logs to backend
+    log("BAS Experiment Monitor initializing...", "SYS");
+    log("Edge HAR Neural Network Model loaded (YOLOv8 + SlowFast).", "SYS");
+    log("Sequence Engine active. Predefined Experiment: EXP-01 Loaded.", "SYS");
+    log("System Ready. Waiting for camera input or video source.", "SYS");
+
     if (backend.logMessage) {
         backend.logMessage.connect(function(msg, type) {
-            window.basLog(msg, type);
+            log(msg, type, true); // true = fromBackend
         });
     }
 
@@ -677,8 +683,14 @@ function deleteExperiment(experimentId) {
     updateClock();
 
     // --- Terminal Logging Engine ---
-    function log(message, type = 'SYS') {
+    function log(message, type = 'SYS', fromBackend = false) {
         if (!elements.terminalLogFeed) return;
+        
+        // Forward UI-generated logs to the Python backend to be saved to file
+        if (!fromBackend && backend && backend.logFromFrontend) {
+            backend.logFromFrontend(message, type);
+        }
+
         const now = new Date();
         const timestamp = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
         
@@ -709,13 +721,6 @@ function deleteExperiment(experimentId) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
-
-    // Initial Logs
-    log("BAS Experiment Monitor initializing...", "SYS");
-    log("Edge HAR Neural Network Model loaded (YOLOv8 + SlowFast).", "SYS");
-    log("Sequence Engine active. Predefined Experiment: EXP-01 Loaded.", "SYS");
-    log("System Ready. Waiting for camera input or video source.", "SYS");
-
     // Clear log button
     if (elements.btnClearLog) {
         elements.btnClearLog.addEventListener('click', () => {
