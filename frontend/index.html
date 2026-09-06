@@ -346,6 +346,64 @@
         </div>
     </div>
 
+    <!-- ================= CUSTOM EXPERIMENT MODAL ================= -->
+    <div id="modal-experiment-builder" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-surface-container rounded-lg border border-outline-variant shadow-2xl flex flex-col w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-4 border-b border-outline-variant/50 bg-surface-container-high shrink-0">
+                <h3 class="font-display-lg text-on-surface text-lg flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-fixed-dim">science</span>
+                    Create Custom Experiment
+                </h3>
+                <button id="btn-close-modal" class="text-on-surface-variant hover:text-on-surface p-1 rounded hover:bg-surface-dim transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+            
+            <!-- Modal Body (Scrollable) -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-6 bg-surface-dim">
+                <!-- Experiment Meta -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block font-label-caps text-[11px] text-on-surface-variant mb-1.5 uppercase">Experiment Name</label>
+                        <input type="text" id="new-exp-name" placeholder="e.g., Extended Calibration Test" class="w-full bg-surface-container-lowest border border-outline-variant/60 rounded px-3 py-2 text-sm text-on-surface focus:border-primary-fixed-dim focus:outline-none transition-colors">
+                    </div>
+                    <div>
+                        <label class="block font-label-caps text-[11px] text-on-surface-variant mb-1.5 uppercase">Description</label>
+                        <textarea id="new-exp-desc" rows="2" placeholder="Briefly describe the purpose of this sequence..." class="w-full bg-surface-container-lowest border border-outline-variant/60 rounded px-3 py-2 text-sm text-on-surface focus:border-primary-fixed-dim focus:outline-none transition-colors resize-none"></textarea>
+                    </div>
+                </div>
+
+                <hr class="border-outline-variant/40">
+
+                <!-- Steps Configuration -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <label class="font-label-caps text-[11px] text-on-surface-variant uppercase">Sequence Steps</label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-on-surface-variant">Total Steps:</span>
+                            <input type="number" id="new-exp-steps-count" min="1" max="20" value="1" class="w-16 bg-surface-container-lowest border border-outline-variant/60 rounded px-2 py-1 text-sm text-center text-on-surface focus:border-primary-fixed-dim focus:outline-none">
+                        </div>
+                    </div>
+                    
+                    <!-- Dynamic Steps Container -->
+                    <div id="dynamic-steps-container" class="space-y-3">
+                        <!-- Steps will be injected here by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-outline-variant/50 bg-surface-container-high flex justify-end gap-3 shrink-0">
+                <button id="btn-cancel-exp" class="px-4 py-2 rounded text-xs font-label-caps text-on-surface border border-outline-variant hover:bg-surface-container-highest transition-colors">Cancel</button>
+                <button id="btn-save-exp" class="px-5 py-2 rounded text-xs font-label-caps bg-primary-fixed-dim text-on-primary-fixed font-semibold hover:bg-primary transition-colors shadow-sm flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">save</span>
+                    Save Experiment
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
     <script src="assets/js/theme.js"></script>
     <!-- Core App Engine JavaScript -->

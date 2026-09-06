@@ -115,75 +115,116 @@ function startPythonCameraFeed() {
 
 const btnNewExperiment = document.getElementById('btn-new-experiment');
 
+// =========================================================
+// --- Custom Experiment Modal Logic ---
+// =========================================================
+const modalExpBuilder = document.getElementById('modal-experiment-builder');
+const btnCloseModal = document.getElementById('btn-close-modal');
+const btnCancelExp = document.getElementById('btn-cancel-exp');
+const btnSaveExp = document.getElementById('btn-save-exp');
+const dynamicStepsContainer = document.getElementById('dynamic-steps-container');
+const expStepsCountInput = document.getElementById('new-exp-steps-count');
+
+function renderStepInputs(count) {
+    if (!dynamicStepsContainer) return;
+    dynamicStepsContainer.innerHTML = '';
+    for (let i = 1; i <= count; i++) {
+        const stepHtml = `
+            <div class="bg-surface-container-high rounded border border-outline-variant/30 p-3 flex gap-3">
+                <div class="font-data-lg text-primary-fixed-dim text-xs font-bold pt-1.5 w-12 shrink-0">Step ${i}</div>
+                <div class="flex-1 space-y-2">
+                    <input type="text" id="step-desc-${i}" placeholder="Instruction (e.g., Transfer 5ml reagent...)" class="w-full bg-surface-container-lowest border border-outline-variant/60 rounded px-2 py-1.5 text-xs text-on-surface focus:border-primary-fixed-dim focus:outline-none transition-colors">
+                    <input type="text" id="step-action-${i}" placeholder="Expected Action / Target (Optional)" class="w-full bg-surface-container-lowest border border-outline-variant/60 rounded px-2 py-1.5 text-xs text-on-surface focus:border-primary-fixed-dim focus:outline-none transition-colors opacity-80">
+                </div>
+            </div>
+        `;
+        dynamicStepsContainer.insertAdjacentHTML('beforeend', stepHtml);
+    }
+}
+
+function openExpModal() {
+    if (!backend) {
+        alert("Backend not connected.");
+        return;
+    }
+    // Reset fields
+    document.getElementById('new-exp-name').value = '';
+    document.getElementById('new-exp-desc').value = '';
+    if (expStepsCountInput) expStepsCountInput.value = 1;
+    renderStepInputs(1);
+    
+    if (modalExpBuilder) modalExpBuilder.classList.remove('hidden');
+}
+
+function closeExpModal() {
+    if (modalExpBuilder) modalExpBuilder.classList.add('hidden');
+}
+
 if (btnNewExperiment) {
-    btnNewExperiment.addEventListener('click', () => {
+    btnNewExperiment.addEventListener('click', openExpModal);
+}
+if (btnCloseModal) btnCloseModal.addEventListener('click', closeExpModal);
+if (btnCancelExp) btnCancelExp.addEventListener('click', closeExpModal);
 
-        if (!backend) {
-            console.error("Backend not connected.");
+if (expStepsCountInput) {
+    expStepsCountInput.addEventListener('change', (e) => {
+        let count = parseInt(e.target.value);
+        if (count < 1) count = 1;
+        if (count > 20) count = 20;
+        e.target.value = count;
+        renderStepInputs(count);
+    });
+}
+
+if (btnSaveExp) {
+    btnSaveExp.addEventListener('click', () => {
+        const name = document.getElementById('new-exp-name').value.trim();
+        const description = document.getElementById('new-exp-desc').value.trim();
+        const count = parseInt(expStepsCountInput.value);
+        
+        if (!name) {
+            alert("Please provide an experiment name.");
             return;
         }
-
-        const name = prompt("Enter experiment name:");
-
-        if (!name || !name.trim()) {
-            return;
+        
+        const steps = [];
+        for (let i = 1; i <= count; i++) {
+            const instr = document.getElementById(`step-desc-${i}`).value.trim();
+            const action = document.getElementById(`step-action-${i}`).value.trim();
+            if (!instr) {
+                alert(`Please provide an instruction for Step ${i}.`);
+                return;
+            }
+            steps.push({
+                instruction: instr,
+                expected_action: action
+            });
         }
-
-        const description = prompt(
-            "Enter experiment description:"
-        ) || "";
-
-        const stepsText = prompt(
-            "Enter experiment steps, one per line:"
-        ) || "";
-
-        const steps = stepsText
-            .split('\n')
-            .map(step => step.trim())
-            .filter(step => step.length > 0)
-            .map(step => ({
-                instruction: step,
-                expected_action: ""
-            }));
-
+        
+        btnSaveExp.disabled = true;
+        btnSaveExp.innerHTML = 'Saving...';
+        
         backend.createExperiment(
-    JSON.stringify({
-        name: name.trim(),
-        description: description.trim(),
-        steps: steps
-    }),
-    function(result) {
-
+            JSON.stringify({ name: name, description: description, steps: steps }),
+            function(result) {
+                btnSaveExp.disabled = false;
+                btnSaveExp.innerHTML = '<span class="material-symbols-outlined text-[16px]">save</span> Save Experiment';
+                
                 try {
                     const response = JSON.parse(result);
-
                     if (!response.success) {
-                        console.error(
-                            "Failed to create experiment:",
-                            response.error
-                        );
-                        alert(
-                            "Failed to create experiment: " +
-                            response.error
-                        );
+                        alert("Failed to create experiment: " + response.error);
                         return;
                     }
-
-                    console.log(
-                        "Experiment created:",
-                        response.experiment
-                    );
-
-                    alert("Experiment created successfully!");
-
-                    // Refresh experiment cards
+                    
+                    if (typeof logToTerminal === 'function') {
+                        logToTerminal(`[SYS] Custom experiment '${name}' created successfully.`);
+                    }
+                    closeExpModal();
                     loadExperiments();
-
                 } catch (error) {
-                    console.error(
-                        "Failed to parse create response:",
-                        error
-                    );
+                    console.error("Failed to parse create response:", error);
+                    alert("Error communicating with backend.");
                 }
             }
         );
