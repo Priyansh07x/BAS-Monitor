@@ -1117,14 +1117,29 @@ function deleteExperiment(experimentId) {
         });
     }
 
+    // Track cumulative speech end time
+    let _speechTimer = null;
+    let _speechEndTime = 0;
+
     function speakVoice(text, priority = false) {
         if (!state.isVoiceEnabled) return;
 
-        // Estimate speech duration (~150 wpm ≈ 400ms/word + 500ms buffer)
+        // Estimate speech duration (~150 wpm ≈ 400ms/word + 800ms buffer)
         const words = text.split(/\s+/).length;
-        const estimatedMs = (words * 400) + 500;
+        const estimatedMs = (words * 400) + 800;
+
+        // Cumulative: extend the end time if speech is already queued
+        const now = Date.now();
+        _speechEndTime = Math.max(_speechEndTime, now) + estimatedMs;
 
         state.speechPending = true;
+
+        // Clear previous timer and set a new one for the full cumulative duration
+        if (_speechTimer) clearTimeout(_speechTimer);
+        _speechTimer = setTimeout(() => {
+            state.speechPending = false;
+            _speechTimer = null;
+        }, _speechEndTime - now);
 
         // Route through backend offline TTS (pyttsx3 / macOS say)
         if (backend) {
@@ -1141,11 +1156,6 @@ function deleteExperiment(experimentId) {
             utterance.pitch = 1.0;
             window.speechSynthesis.speak(utterance);
         }
-
-        // Release the lock after estimated speech duration
-        setTimeout(() => {
-            state.speechPending = false;
-        }, estimatedMs);
     }
 
     // --- Analysis Engine & Canvas Drawing ---
