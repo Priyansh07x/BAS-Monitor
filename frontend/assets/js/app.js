@@ -13,6 +13,18 @@ new QWebChannel(qt.webChannelTransport, function(channel) {
 
     console.log("Python backend connected successfully.");
 
+    if (backend.logMessage) {
+        backend.logMessage.connect(function(msg, type) {
+            window.basLog(msg, type);
+        });
+    }
+
+    if (backend.recTimerTick) {
+        backend.recTimerTick.connect(function(timeStr) {
+            window.basOnRecTimerTick(timeStr);
+        });
+    }
+
     loadExperiments();
 
     backend.startCamera(function(success) {
@@ -631,9 +643,9 @@ function deleteExperiment(experimentId) {
         const entry = document.createElement('div');
         entry.className = 'flex items-start font-mono leading-tight hover:bg-surface-container-high/40 px-1 py-0.5 rounded transition-colors';
         
-        let typeColor = 'text-primary-fixed-dim';
-        if (type === 'AI') typeColor = 'text-tertiary-fixed-dim';
-        if (type === 'WARN') typeColor = 'text-secondary-fixed-dim';
+        let typeColor = 'text-primary';
+        if (type === 'AI') typeColor = 'text-tertiary';
+        if (type === 'WARN') typeColor = 'text-secondary';
         if (type === 'ERR') typeColor = 'text-error';
         if (type === 'STREAM') typeColor = 'text-primary';
 
@@ -946,23 +958,52 @@ function deleteExperiment(experimentId) {
     if (elements.btnToggleRec) {
         elements.btnToggleRec.addEventListener('click', () => {
             state.isRecording = !state.isRecording;
+            
             if (state.isRecording) {
-                elements.btnToggleRec.className = "flex items-center px-3 py-1 rounded border border-error/50 bg-error-container/30 text-error font-label-caps text-xs transition-colors animate-pulse";
-                elements.btnToggleRec.innerHTML = `<span class="w-2 h-2 rounded-full bg-error mr-1.5"></span> REC ON`;
-                if (elements.recStatusBadge) elements.recStatusBadge.classList.remove('hidden');
-                
+                _showRecUI();
                 startRecTimer();
                 log("Local video recording started (.mp4 output stream).", "SYS");
-            } else {
-                elements.btnToggleRec.className = "flex items-center px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:text-on-surface font-label-caps text-xs transition-colors";
-                elements.btnToggleRec.innerHTML = `<span class="w-2 h-2 rounded-full bg-outline-variant mr-1.5"></span> Record MP4`;
-                if (elements.recStatusBadge) elements.recStatusBadge.classList.add('hidden');
                 
+                if (backend) {
+                    backend.startRecording();
+                }
+            } else {
+                _hideRecUI();
                 stopRecTimer();
                 log("Local video recording saved.", "SYS");
+                
+                if (backend) {
+                    backend.stopRecording();
+                }
             }
             updateStatusUI();
         });
+    }
+
+    // --- Python backend signal handlers (called from bridge init in index.html) ---
+
+    // Expose log() so Python bridge signals can write to the terminal
+    window.basLog = function(message, type) {
+        log(message, type);
+    };
+
+    // Called every second by Python with "MM:SS" string
+    window.basOnRecTimerTick = function(timeStr) {
+        if (elements.recTimerDisplay) elements.recTimerDisplay.textContent = timeStr;
+    };
+
+    // Helper: show recording UI state
+    function _showRecUI() {
+        elements.btnToggleRec.className = "flex items-center px-3 py-1 rounded border border-error/50 bg-error-container/30 text-error font-label-caps text-xs transition-colors animate-pulse";
+        elements.btnToggleRec.innerHTML = `<span class="w-2 h-2 rounded-full bg-error mr-1.5"></span> REC ON`;
+        if (elements.recStatusBadge) elements.recStatusBadge.classList.remove('hidden');
+    }
+
+    // Helper: hide recording UI state
+    function _hideRecUI() {
+        elements.btnToggleRec.className = "flex items-center px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:text-on-surface font-label-caps text-xs transition-colors";
+        elements.btnToggleRec.innerHTML = `<span class="w-2 h-2 rounded-full bg-outline-variant mr-1.5"></span> Record MP4`;
+        if (elements.recStatusBadge) elements.recStatusBadge.classList.add('hidden');
     }
 
     function startRecTimer() {
@@ -984,13 +1025,29 @@ function deleteExperiment(experimentId) {
         elements.btnToggleStream.addEventListener('click', () => {
             state.isStreaming = !state.isStreaming;
             if (state.isStreaming) {
-                elements.btnToggleStream.className = "flex items-center px-3 py-1 rounded border border-tertiary-fixed/40 bg-tertiary-container/20 text-tertiary-fixed font-label-caps text-xs transition-colors";
-                elements.btnToggleStream.innerHTML = `<span class="material-symbols-outlined text-[14px] mr-1">podcasts</span> Streaming ON`;
-                log(`RTSP IP Stream active at: ${state.ipStreamUrl}`, "STREAM");
+                if (backend) {
+                    backend.startStreaming(function(url) {
+                        if (url) {
+                            state.ipStreamUrl = url;
+                            if (elements.streamInfoText) {
+                                elements.streamInfoText.textContent = `Stream Target: ${url}`;
+                            }
+                            elements.btnToggleStream.className = "flex items-center px-3 py-1 rounded border border-tertiary-fixed/40 bg-tertiary-container/20 text-tertiary font-label-caps text-xs transition-colors";
+                            elements.btnToggleStream.innerHTML = `<span class="material-symbols-outlined text-[14px] mr-1">podcasts</span> Streaming ON`;
+                        } else {
+                            state.isStreaming = false; // Failed to start
+                        }
+                    });
+                }
             } else {
+                if (backend) {
+                    backend.stopStreaming();
+                }
                 elements.btnToggleStream.className = "flex items-center px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:text-on-surface font-label-caps text-xs transition-colors";
                 elements.btnToggleStream.innerHTML = `<span class="material-symbols-outlined text-[14px] mr-1">podcasts</span> IP Stream`;
-                log("RTSP IP Stream stopped.", "STREAM");
+                if (elements.streamInfoText) {
+                    elements.streamInfoText.textContent = `Stream Target: Offline`;
+                }
             }
             updateStatusUI();
         });

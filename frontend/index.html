@@ -230,10 +230,10 @@
 
         <!-- ================= BOTTOM LEFT: TERMINAL LOG ================= -->
         <!-- Aligned under PROCEDURE (Column 1) -->
-        <section class="min-h-0 bg-[#0c0e12] rounded-lg border border-outline-variant/30 p-3 flex flex-col font-data-lg text-xs overflow-hidden">
-            <div class="flex justify-between items-center mb-2 border-b border-outline-variant/30 pb-1.5 shrink-0">
+        <section class="min-h-0 bg-surface-container rounded-lg border border-outline-variant p-3 flex flex-col font-data-lg text-xs overflow-hidden">
+            <div class="flex justify-between items-center mb-2 border-b border-outline-variant pb-1.5 shrink-0">
                 <div class="flex items-center">
-                    <span class="material-symbols-outlined text-[14px] text-primary-fixed-dim mr-1.5">terminal</span>
+                    <span class="material-symbols-outlined text-[14px] text-primary mr-1.5">terminal</span>
                     <h2 class="font-label-caps text-on-surface-variant uppercase text-[10px]">Terminal Log</h2>
                 </div>
                 <button id="btn-clear-log" class="text-[10px] font-label-caps text-on-surface-variant hover:text-on-surface transition-colors">Clear</button>
@@ -245,8 +245,8 @@
             </div>
 
             <!-- Terminal command line prompt -->
-            <div class="flex items-center pt-1.5 mt-1 border-t border-outline-variant/20 text-xs font-mono shrink-0">
-                <span class="text-primary-fixed-dim mr-1.5 font-bold">&gt;</span>
+            <div class="flex items-center pt-1.5 mt-1 border-t border-outline-variant text-xs font-mono shrink-0">
+                <span class="text-primary mr-1.5 font-bold">&gt;</span>
                 <input id="terminal-input" type="text" placeholder="Type command (e.g. status, help)..." class="bg-transparent border-none outline-none text-on-surface text-xs font-mono w-full focus:ring-0">
             </div>
         </section>
@@ -346,9 +346,9 @@
         </div>
     </div>
 
-   <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-<script src="assets/js/theme.js"></script>
-<!-- Core App Engine JavaScript -->
-<script src="assets/js/app.js"></script>
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script src="assets/js/theme.js"></script>
+    <!-- Core App Engine JavaScript -->
+    <script src="assets/js/app.js"></script>
 </body>
 </html>

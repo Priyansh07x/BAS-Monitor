@@ -3,3 +3,5 @@ PySide6-Essentials
 PySide6-Addons
 opencv-python
 numpy
+pyttsx3
+pytest
