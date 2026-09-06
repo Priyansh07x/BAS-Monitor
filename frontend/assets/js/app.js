@@ -394,7 +394,7 @@ function loadExperiment(experimentId) {
             );
 
             speakVoice(
-                `Experiment ${experiment.name} loaded.`
+                `Experiment ${experiment.name} loaded. Step 1: ${experimentSteps[0].desc}`
             );
 
         } catch (error) {
@@ -817,7 +817,7 @@ function deleteExperiment(experimentId) {
                 updateStatusUI();
                 renderProcedureSteps();
                 log(`Manual step selection: Step ${step.id} (${step.title})`, "SYS");
-                speakVoice(`Step ${step.id}: ${step.title}`);
+                speakVoice(`Step ${step.id}: ${step.desc}`);
             });
 
             container.appendChild(stepDiv);
@@ -1097,6 +1097,12 @@ function deleteExperiment(experimentId) {
     if (elements.btnToggleVoice) {
         elements.btnToggleVoice.addEventListener('click', () => {
             state.isVoiceEnabled = !state.isVoiceEnabled;
+
+            // Sync with backend TTS engine
+            if (backend) {
+                backend.setVoiceEnabled(state.isVoiceEnabled);
+            }
+
             if (state.isVoiceEnabled) {
                 elements.btnToggleVoice.className = "flex items-center px-3 py-1 rounded border border-tertiary-fixed/30 bg-tertiary-container/10 text-tertiary-fixed-dim font-label-caps text-xs transition-colors";
                 elements.btnToggleVoice.innerHTML = `<span class="material-symbols-outlined text-[14px] mr-1">volume_up</span> Voice ON`;
@@ -1110,13 +1116,27 @@ function deleteExperiment(experimentId) {
         });
     }
 
-    function speakVoice(text) {
-        if (!state.isVoiceEnabled || !('speechSynthesis' in window)) return;
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        window.speechSynthesis.speak(utterance);
+    function speakVoice(text, priority = false) {
+        if (!state.isVoiceEnabled) return;
+
+        // Route through backend offline TTS (pyttsx3 / macOS say)
+        if (backend) {
+            if (priority) {
+                backend.speakPriority(text);
+            } else {
+                backend.speak(text);
+            }
+            return;
+        }
+
+        // Browser fallback if backend not connected
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
     }
 
     // --- Analysis Engine & Canvas Drawing ---
@@ -1283,7 +1303,7 @@ function deleteExperiment(experimentId) {
             );
 
             speakVoice(
-                `Step ${currentStep.id} validated.`
+                `Step ${currentStep.id} success.`
             );
 
             if (state.currentStepIndex < experimentSteps.length - 1) {
@@ -1292,13 +1312,15 @@ function deleteExperiment(experimentId) {
 
                 state.validationState = 'VALID';
 
+                const nextStep = experimentSteps[state.currentStepIndex];
+
                 log(
                     `Advancing to Step ${state.currentStepIndex + 1}.`,
                     "SYS"
                 );
 
                 speakVoice(
-                    `Moving to Step ${state.currentStepIndex + 1}.`
+                    `Next: Step ${nextStep.id}. ${nextStep.desc}`
                 );
 
                 renderProcedureSteps();
@@ -1312,7 +1334,7 @@ function deleteExperiment(experimentId) {
                 );
 
                 speakVoice(
-                    "Experiment procedure complete."
+                    "Experiment procedure complete. All steps successfully verified."
                 );
 
                 state.isAnalyzing = false;
