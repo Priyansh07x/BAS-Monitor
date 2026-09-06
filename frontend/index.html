@@ -35,6 +35,35 @@
         .custom-scroll::-webkit-scrollbar-thumb:hover {
             background-color: #00daf3;
         }
+
+        /* Modal Layout Fixes */
+        .modal-overlay {
+            position: fixed;
+            top: 0; right: 0; bottom: 0; left: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            padding: 1rem;
+        }
+        .modal-overlay.hidden {
+            display: none !important;
+        }
+        .modal-box {
+            width: 100%;
+            max-width: 42rem;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-body {
+            flex: 1 1 0%;
+            min-height: 0;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body class="bg-background text-on-background font-body-md h-screen flex flex-col overflow-hidden select-none">
@@ -362,8 +391,8 @@
     </div>
 
     <!-- ================= CUSTOM EXPERIMENT MODAL ================= -->
-    <div id="modal-experiment-builder" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div class="bg-surface-container rounded-lg border border-outline-variant shadow-2xl flex flex-col w-full max-w-2xl max-h-[90vh] overflow-hidden">
+    <div id="modal-experiment-builder" class="modal-overlay hidden">
+        <div class="modal-box bg-surface-container rounded-lg border border-outline-variant shadow-2xl">
             <!-- Modal Header -->
             <div class="flex items-center justify-between p-4 border-b border-outline-variant/50 bg-surface-container-high shrink-0">
                 <h3 class="font-display-lg text-on-surface text-lg flex items-center gap-2">
@@ -376,7 +405,7 @@
             </div>
             
             <!-- Modal Body (Scrollable) -->
-            <div class="flex-1 min-h-0 overflow-y-auto custom-scroll p-5 space-y-6 bg-surface-dim" style="scrollbar-width: thin; scrollbar-color: #3b494c transparent;">
+            <div class="modal-body custom-scroll p-5 space-y-6 bg-surface-dim" style="scrollbar-width: thin; scrollbar-color: #3b494c transparent;">
                 <!-- Experiment Meta -->
                 <div class="space-y-4">
                     <div>
