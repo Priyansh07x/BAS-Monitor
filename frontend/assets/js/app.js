@@ -565,7 +565,8 @@ function deleteExperiment(experimentId) {
         validationState: 'VALID', // 'VALID', 'WARNING', 'ERROR'
         ipStreamUrl: 'rtsp://192.168.1.50:8554/live',
         analysisInterval: null,
-        boxes: []
+        boxes: [],
+        speechPending: false
     };
 
     // --- Predefined Experiment Steps (ISRO Microgravity Experiment Sample) ---
@@ -1119,6 +1120,12 @@ function deleteExperiment(experimentId) {
     function speakVoice(text, priority = false) {
         if (!state.isVoiceEnabled) return;
 
+        // Estimate speech duration (~150 wpm ≈ 400ms/word + 500ms buffer)
+        const words = text.split(/\s+/).length;
+        const estimatedMs = (words * 400) + 500;
+
+        state.speechPending = true;
+
         // Route through backend offline TTS (pyttsx3 / macOS say)
         if (backend) {
             if (priority) {
@@ -1126,17 +1133,19 @@ function deleteExperiment(experimentId) {
             } else {
                 backend.speak(text);
             }
-            return;
-        }
-
-        // Browser fallback if backend not connected
-        if ('speechSynthesis' in window) {
+        } else if ('speechSynthesis' in window) {
+            // Browser fallback if backend not connected
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = 1.0;
             utterance.pitch = 1.0;
             window.speechSynthesis.speak(utterance);
         }
+
+        // Release the lock after estimated speech duration
+        setTimeout(() => {
+            state.speechPending = false;
+        }, estimatedMs);
     }
 
     // --- Analysis Engine & Canvas Drawing ---
@@ -1271,7 +1280,7 @@ function deleteExperiment(experimentId) {
     clearInterval(state.analysisInterval);
 
     state.analysisInterval = setInterval(() => {
-        if (!state.isAnalyzing || state.isPaused) return;
+        if (!state.isAnalyzing || state.isPaused || state.speechPending) return;
 
         // Simulated confidence variation
         state.confidence = Math.min(
