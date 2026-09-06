@@ -115,75 +115,116 @@ function startPythonCameraFeed() {
 
 const btnNewExperiment = document.getElementById('btn-new-experiment');
 
+// =========================================================
+// --- Custom Experiment Modal Logic ---
+// =========================================================
+const modalExpBuilder = document.getElementById('modal-experiment-builder');
+const btnCloseModal = document.getElementById('btn-close-modal');
+const btnCancelExp = document.getElementById('btn-cancel-exp');
+const btnSaveExp = document.getElementById('btn-save-exp');
+const dynamicStepsContainer = document.getElementById('dynamic-steps-container');
+const expStepsCountInput = document.getElementById('new-exp-steps-count');
+
+function renderStepInputs(count) {
+    if (!dynamicStepsContainer) return;
+    dynamicStepsContainer.innerHTML = '';
+    for (let i = 1; i <= count; i++) {
+        const stepHtml = `
+            <div class="bg-surface-container-high rounded border border-outline-variant/30 p-3 flex gap-3">
+                <div class="font-data-lg text-primary-fixed-dim text-xs font-bold pt-1.5 w-12 shrink-0">Step ${i}</div>
+                <div class="flex-1 space-y-2">
+                    <input type="text" id="step-desc-${i}" placeholder="Instruction (e.g., Transfer 5ml reagent...)" class="w-full bg-surface-container-lowest border border-outline-variant/60 rounded px-2 py-1.5 text-xs text-on-surface focus:border-primary-fixed-dim focus:outline-none transition-colors">
+                    <input type="text" id="step-action-${i}" placeholder="Expected Action / Target (Optional)" class="w-full bg-surface-container-lowest border border-outline-variant/60 rounded px-2 py-1.5 text-xs text-on-surface focus:border-primary-fixed-dim focus:outline-none transition-colors opacity-80">
+                </div>
+            </div>
+        `;
+        dynamicStepsContainer.insertAdjacentHTML('beforeend', stepHtml);
+    }
+}
+
+function openExpModal() {
+    if (!backend) {
+        alert("Backend not connected.");
+        return;
+    }
+    // Reset fields
+    document.getElementById('new-exp-name').value = '';
+    document.getElementById('new-exp-desc').value = '';
+    if (expStepsCountInput) expStepsCountInput.value = 1;
+    renderStepInputs(1);
+    
+    if (modalExpBuilder) modalExpBuilder.classList.remove('hidden');
+}
+
+function closeExpModal() {
+    if (modalExpBuilder) modalExpBuilder.classList.add('hidden');
+}
+
 if (btnNewExperiment) {
-    btnNewExperiment.addEventListener('click', () => {
+    btnNewExperiment.addEventListener('click', openExpModal);
+}
+if (btnCloseModal) btnCloseModal.addEventListener('click', closeExpModal);
+if (btnCancelExp) btnCancelExp.addEventListener('click', closeExpModal);
 
-        if (!backend) {
-            console.error("Backend not connected.");
+if (expStepsCountInput) {
+    expStepsCountInput.addEventListener('change', (e) => {
+        let count = parseInt(e.target.value);
+        if (count < 1) count = 1;
+        if (count > 20) count = 20;
+        e.target.value = count;
+        renderStepInputs(count);
+    });
+}
+
+if (btnSaveExp) {
+    btnSaveExp.addEventListener('click', () => {
+        const name = document.getElementById('new-exp-name').value.trim();
+        const description = document.getElementById('new-exp-desc').value.trim();
+        const count = parseInt(expStepsCountInput.value);
+        
+        if (!name) {
+            alert("Please provide an experiment name.");
             return;
         }
-
-        const name = prompt("Enter experiment name:");
-
-        if (!name || !name.trim()) {
-            return;
+        
+        const steps = [];
+        for (let i = 1; i <= count; i++) {
+            const instr = document.getElementById(`step-desc-${i}`).value.trim();
+            const action = document.getElementById(`step-action-${i}`).value.trim();
+            if (!instr) {
+                alert(`Please provide an instruction for Step ${i}.`);
+                return;
+            }
+            steps.push({
+                instruction: instr,
+                expected_action: action
+            });
         }
-
-        const description = prompt(
-            "Enter experiment description:"
-        ) || "";
-
-        const stepsText = prompt(
-            "Enter experiment steps, one per line:"
-        ) || "";
-
-        const steps = stepsText
-            .split('\n')
-            .map(step => step.trim())
-            .filter(step => step.length > 0)
-            .map(step => ({
-                instruction: step,
-                expected_action: ""
-            }));
-
+        
+        btnSaveExp.disabled = true;
+        btnSaveExp.innerHTML = 'Saving...';
+        
         backend.createExperiment(
-    JSON.stringify({
-        name: name.trim(),
-        description: description.trim(),
-        steps: steps
-    }),
-    function(result) {
-
+            JSON.stringify({ name: name, description: description, steps: steps }),
+            function(result) {
+                btnSaveExp.disabled = false;
+                btnSaveExp.innerHTML = '<span class="material-symbols-outlined text-[16px]">save</span> Save Experiment';
+                
                 try {
                     const response = JSON.parse(result);
-
                     if (!response.success) {
-                        console.error(
-                            "Failed to create experiment:",
-                            response.error
-                        );
-                        alert(
-                            "Failed to create experiment: " +
-                            response.error
-                        );
+                        alert("Failed to create experiment: " + response.error);
                         return;
                     }
-
-                    console.log(
-                        "Experiment created:",
-                        response.experiment
-                    );
-
-                    alert("Experiment created successfully!");
-
-                    // Refresh experiment cards
+                    
+                    if (typeof logToTerminal === 'function') {
+                        logToTerminal(`[SYS] Custom experiment '${name}' created successfully.`);
+                    }
+                    closeExpModal();
                     loadExperiments();
-
                 } catch (error) {
-                    console.error(
-                        "Failed to parse create response:",
-                        error
-                    );
+                    console.error("Failed to parse create response:", error);
+                    alert("Error communicating with backend.");
                 }
             }
         );
@@ -353,7 +394,7 @@ function loadExperiment(experimentId) {
             );
 
             speakVoice(
-                `Experiment ${experiment.name} loaded.`
+                `Experiment ${experiment.name} loaded. Step 1: ${experimentSteps[0].desc}`
             );
 
         } catch (error) {
@@ -524,7 +565,8 @@ function deleteExperiment(experimentId) {
         validationState: 'VALID', // 'VALID', 'WARNING', 'ERROR'
         ipStreamUrl: 'rtsp://192.168.1.50:8554/live',
         analysisInterval: null,
-        boxes: []
+        boxes: [],
+        speechPending: false
     };
 
     // --- Predefined Experiment Steps (ISRO Microgravity Experiment Sample) ---
@@ -776,7 +818,7 @@ function deleteExperiment(experimentId) {
                 updateStatusUI();
                 renderProcedureSteps();
                 log(`Manual step selection: Step ${step.id} (${step.title})`, "SYS");
-                speakVoice(`Step ${step.id}: ${step.title}`);
+                speakVoice(`Step ${step.id}: ${step.desc}`);
             });
 
             container.appendChild(stepDiv);
@@ -1056,6 +1098,12 @@ function deleteExperiment(experimentId) {
     if (elements.btnToggleVoice) {
         elements.btnToggleVoice.addEventListener('click', () => {
             state.isVoiceEnabled = !state.isVoiceEnabled;
+
+            // Sync with backend TTS engine
+            if (backend) {
+                backend.setVoiceEnabled(state.isVoiceEnabled);
+            }
+
             if (state.isVoiceEnabled) {
                 elements.btnToggleVoice.className = "flex items-center px-3 py-1 rounded border border-tertiary-fixed/30 bg-tertiary-container/10 text-tertiary-fixed-dim font-label-caps text-xs transition-colors";
                 elements.btnToggleVoice.innerHTML = `<span class="material-symbols-outlined text-[14px] mr-1">volume_up</span> Voice ON`;
@@ -1069,13 +1117,45 @@ function deleteExperiment(experimentId) {
         });
     }
 
-    function speakVoice(text) {
-        if (!state.isVoiceEnabled || !('speechSynthesis' in window)) return;
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        window.speechSynthesis.speak(utterance);
+    // Track cumulative speech end time
+    let _speechTimer = null;
+    let _speechEndTime = 0;
+
+    function speakVoice(text, priority = false) {
+        if (!state.isVoiceEnabled) return;
+
+        // Estimate speech duration (~150 wpm ≈ 400ms/word + 800ms buffer)
+        const words = text.split(/\s+/).length;
+        const estimatedMs = (words * 400) + 800;
+
+        // Cumulative: extend the end time if speech is already queued
+        const now = Date.now();
+        _speechEndTime = Math.max(_speechEndTime, now) + estimatedMs;
+
+        state.speechPending = true;
+
+        // Clear previous timer and set a new one for the full cumulative duration
+        if (_speechTimer) clearTimeout(_speechTimer);
+        _speechTimer = setTimeout(() => {
+            state.speechPending = false;
+            _speechTimer = null;
+        }, _speechEndTime - now);
+
+        // Route through backend offline TTS (pyttsx3 / macOS say)
+        if (backend) {
+            if (priority) {
+                backend.speakPriority(text);
+            } else {
+                backend.speak(text);
+            }
+        } else if ('speechSynthesis' in window) {
+            // Browser fallback if backend not connected
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
     }
 
     // --- Analysis Engine & Canvas Drawing ---
@@ -1210,7 +1290,7 @@ function deleteExperiment(experimentId) {
     clearInterval(state.analysisInterval);
 
     state.analysisInterval = setInterval(() => {
-        if (!state.isAnalyzing || state.isPaused) return;
+        if (!state.isAnalyzing || state.isPaused || state.speechPending) return;
 
         // Simulated confidence variation
         state.confidence = Math.min(
@@ -1233,8 +1313,10 @@ function deleteExperiment(experimentId) {
 
         updateStatusUI();
 
-        // Simulate successful validation of the current step
+        // --- Step Validation with Voice Announcements ---
         if (state.confidence >= 95) {
+            // SUCCESS: step validated
+            state.validationState = 'VALID';
 
             log(
                 `Step ${currentStep.id} validated: ${currentStep.title}`,
@@ -1242,22 +1324,22 @@ function deleteExperiment(experimentId) {
             );
 
             speakVoice(
-                `Step ${currentStep.id} validated.`
+                `Step ${currentStep.id} complete. ${currentStep.title}.`
             );
 
             if (state.currentStepIndex < experimentSteps.length - 1) {
 
                 state.currentStepIndex++;
 
-                state.validationState = 'VALID';
+                const nextStep = experimentSteps[state.currentStepIndex];
 
                 log(
-                    `Advancing to Step ${state.currentStepIndex + 1}.`,
+                    `Advancing to Step ${nextStep.id}: ${nextStep.title}`,
                     "SYS"
                 );
 
                 speakVoice(
-                    `Moving to Step ${state.currentStepIndex + 1}.`
+                    `Next, Step ${nextStep.id}. ${nextStep.desc}`
                 );
 
                 renderProcedureSteps();
@@ -1271,7 +1353,7 @@ function deleteExperiment(experimentId) {
                 );
 
                 speakVoice(
-                    "Experiment procedure complete."
+                    "Experiment procedure complete. All steps successfully verified."
                 );
 
                 state.isAnalyzing = false;
@@ -1284,6 +1366,33 @@ function deleteExperiment(experimentId) {
 
                 updateStatusUI();
             }
+
+        } else if (state.confidence < 90) {
+            // FAILED: confidence too low
+            state.validationState = 'ERROR';
+
+            log(
+                `Step ${currentStep.id} failed: confidence ${state.confidence}% below threshold.`,
+                "ERR"
+            );
+
+            speakVoice(
+                `Step ${currentStep.id} failed. Please retry ${currentStep.title}.`,
+                true
+            );
+
+            updateStatusUI();
+
+        } else {
+            // WARNING: borderline confidence (90-94)
+            state.validationState = 'WARNING';
+
+            log(
+                `Step ${currentStep.id} uncertain: confidence ${state.confidence}%.`,
+                "WARN"
+            );
+
+            updateStatusUI();
         }
 
     }, 3000);

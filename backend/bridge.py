@@ -16,6 +16,7 @@ from .video.camera import Camera
 from .video.recorder import VideoRecorder
 from .network.streamer import get_ip_streamer
 from .logging.system_logger import get_system_logger
+from .voice.voice_alert import get_voice_service
 
 
 class Bridge(QObject):
@@ -41,6 +42,7 @@ class Bridge(QObject):
         self._streamer = get_ip_streamer()
         self._rec_seconds = 0
         self._rec_timer = None
+        self._voice = get_voice_service()
 
     @Slot(result=str)
     def getExperiments(self):
@@ -286,6 +288,26 @@ class Bridge(QObject):
         return base64.b64encode(buffer).decode("utf-8")
 
     # ================================================================== #
+    #  VOICE TTS
+    # ================================================================== #
+
+    @Slot(str)
+    def speak(self, text):
+        """Send text to the offline TTS engine for spoken output."""
+        self._voice.speak(text, priority=False)
+
+    @Slot(str)
+    def speakPriority(self, text):
+        """Send high-priority text to the TTS engine (flushes queue)."""
+        self._voice.speak(text, priority=True)
+
+    @Slot(bool)
+    def setVoiceEnabled(self, enabled):
+        """Toggle the offline TTS engine on or off."""
+        self._voice.set_enabled(enabled)
+        self._slog.info(f"Voice TTS {'enabled' if enabled else 'disabled'}")
+
+    # ================================================================== #
     #  CLEANUP
     # ================================================================== #
 
@@ -297,3 +319,4 @@ class Bridge(QObject):
             self.stopStreaming()
         self.stopCamera()
         self._recorder.shutdown()
+        self._voice.shutdown()
