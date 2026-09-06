@@ -310,7 +310,21 @@ class Bridge(QObject):
     # ================================================================== #
     #  CLEANUP
     # ================================================================== #
+    @Slot(str, str)
+    def logFromFrontend(self, message: str, level: str) -> None:
+        """Receive a log message from the JS frontend and write to Python system logger."""
+        if level == "ERR":
+            self._slog.error(f"[UI] {message}")
+        elif level == "WARN":
+            self._slog.warn(f"[UI] {message}")
+        elif level == "AI":
+            self._slog.ai(f"[UI] {message}")
+        elif level == "STREAM":
+            self._slog.stream(f"[UI] {message}")
+        else:
+            self._slog.info(f"[UI] {message}")
 
+    # --- Cleanup ---
     def shutdown(self):
         """Release all resources on app exit."""
         if self._recorder.is_recording:
