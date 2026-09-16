@@ -1,0 +1,39 @@
+{
+  "camera": {
+    "source": 0,
+    "width": 1280,
+    "height": 720,
+    "fps": 30.0,
+    "buffer_size": 1
+  },
+  "ai": {
+    "vision_hef_path": "data/vision_pipeline.hef",
+    "temporal_tflite_path": "data/temporal_action.tflite",
+    "detection_threshold": 0.50,
+    "pose_threshold": 0.50,
+    "action_confidence_threshold": 0.85,
+    "step_validation_threshold": 0.90,
+    "temporal_window_size": 30,
+    "use_hailo": true,
+    "mock_on_fallback": true
+  },
+  "voice": {
+    "enabled": true,
+    "rate": 175,
+    "volume": 1.0,
+    "voice_id": null,
+    "announce_steps": true,
+    "announce_warnings": true
+  },
+  "storage": {
+    "video_dir": "data/videos",
+    "log_dir": "data/logs",
+    "experiments_file": "data/experiments.json"
+  },
+  "ui": {
+    "theme": "Obsidian Control",
+    "window_width": 1600,
+    "window_height": 900,
+    "poll_interval_ms": 100
+  }
+}
