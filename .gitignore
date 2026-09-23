@@ -6,3 +6,8 @@ __pycache__/
 data/recordings/
 data/logs/
 data/snapshots/
+
+training/
+
+BAS-Monitor/.venv/
+BAS-Monitor/node_modules/
