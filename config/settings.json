@@ -22,6 +22,7 @@
     "rate": 175,
     "volume": 1.0,
     "voice_id": null,
+    "cooldown_seconds": 5.0,
     "announce_steps": true,
     "announce_warnings": true
   },

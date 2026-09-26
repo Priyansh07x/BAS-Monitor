@@ -25,12 +25,21 @@ class VoiceAlertService:
         enabled: bool = True,
         rate: int = 175,
         volume: float = 1.0,
-        voice_id: Optional[str] = None
+        voice_id: Optional[str] = None,
+        cooldown_seconds: float = 5.0,
+        announce_steps: bool = True,
+        announce_warnings: bool = True,
     ):
         self.enabled = enabled
         self.rate = rate
         self.volume = max(0.0, min(1.0, volume))
         self.voice_id = voice_id
+        self.cooldown_seconds = cooldown_seconds
+        self.announce_steps = announce_steps
+        self.announce_warnings = announce_warnings
+
+        # Debounce tracking: maps message text -> last spoken timestamp
+        self._last_spoken: Dict[str, float] = {}
 
         self._queue: queue.Queue = queue.Queue()
         self._stop_event = threading.Event()
@@ -98,11 +107,20 @@ class VoiceAlertService:
         """
         Enqueue a speech alert.
         If priority=True, any non-urgent pending messages in the queue are flushed immediately.
+        Duplicate messages within cooldown_seconds are silently dropped (debounced).
         """
         if not self.enabled or not text or not text.strip():
             return
 
         clean_text = text.strip()
+
+        # Debounce: skip if same message was spoken within cooldown window
+        now = time.time()
+        if clean_text in self._last_spoken:
+            elapsed = now - self._last_spoken[clean_text]
+            if elapsed < self.cooldown_seconds:
+                return
+        self._last_spoken[clean_text] = now
 
         if priority:
             # Clear pending queue for immediate high-priority alerts
@@ -166,7 +184,10 @@ class VoiceAlertService:
         if self._engine_type == "macos_say":
             try:
                 # Use macOS built-in command line speech synthesizer
-                cmd = ["say", "-r", str(self.rate), text]
+                cmd = ["say", "-r", str(self.rate)]
+                if self.voice_id:
+                    cmd.extend(["-v", self.voice_id])
+                cmd.append(text)
                 self._current_process = subprocess.Popen(
                     cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
@@ -183,10 +204,14 @@ class VoiceAlertService:
 
     def alert_next_step(self, step_id: int, step_title: str) -> None:
         """Audible next-step guidance."""
+        if not self.announce_steps:
+            return
         self.speak(f"Proceed to Step {step_id}: {step_title}", priority=False)
 
     def alert_out_of_order(self, expected_title: str, detected_action: str) -> None:
         """Spoken caution for out-of-order action."""
+        if not self.announce_warnings:
+            return
         self.speak(
             f"Caution. Detected {detected_action}, but expecting {expected_title}.",
             priority=True
@@ -194,6 +219,8 @@ class VoiceAlertService:
 
     def alert_skipped_step(self, step_id: int, step_title: str) -> None:
         """Spoken warning for skipped step."""
+        if not self.announce_warnings:
+            return
         self.speak(
             f"Warning. Step {step_id}, {step_title}, was skipped. Please verify.",
             priority=True
@@ -219,8 +246,29 @@ _voice_service_instance: Optional[VoiceAlertService] = None
 
 
 def get_voice_service() -> VoiceAlertService:
-    """Get or initialize the global VoiceAlertService singleton."""
+    """Get or initialize the global VoiceAlertService singleton, loading config from settings.json."""
     global _voice_service_instance
     if _voice_service_instance is None:
-        _voice_service_instance = VoiceAlertService()
+        import json
+        from pathlib import Path
+
+        config_path = Path(__file__).resolve().parent.parent.parent / "config" / "settings.json"
+        kwargs: Dict[str, Any] = {}
+
+        try:
+            with open(config_path, "r") as f:
+                settings = json.load(f)
+            voice_cfg = settings.get("voice", {})
+            kwargs["enabled"] = voice_cfg.get("enabled", True)
+            kwargs["rate"] = voice_cfg.get("rate", 175)
+            kwargs["volume"] = voice_cfg.get("volume", 1.0)
+            kwargs["voice_id"] = voice_cfg.get("voice_id", None)
+            kwargs["cooldown_seconds"] = voice_cfg.get("cooldown_seconds", 5.0)
+            kwargs["announce_steps"] = voice_cfg.get("announce_steps", True)
+            kwargs["announce_warnings"] = voice_cfg.get("announce_warnings", True)
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass  # Fall back to defaults
+
+        _voice_service_instance = VoiceAlertService(**kwargs)
     return _voice_service_instance
+

@@ -12,7 +12,7 @@ from PySide6.QtCore import QObject, Slot, Signal, QTimer
 
 from . import experiment_manager
 from .app_state import AppState
-from .video.camera import Camera
+from .video.camera_manager import get_camera_manager
 from .video.recorder import VideoRecorder
 from .network.streamer import get_ip_streamer
 from .logging.system_logger import get_system_logger
@@ -35,7 +35,7 @@ class Bridge(QObject):
     def __init__(self, app_state: AppState):
         super().__init__()
         self.state = app_state
-        self.camera = self.state.camera
+        self._cam_mgr = self.state.camera_manager
         # Recording & Streaming support
         self._slog = get_system_logger()
         self._recorder = VideoRecorder()
@@ -95,24 +95,41 @@ class Bridge(QObject):
 
     @Slot(result=bool)
     def startCamera(self):
-        success = self.camera.open()
+        """Start the default (or previously selected) camera."""
+        active = self._cam_mgr.get_active()
+        if active and active.is_connected():
+            self.state.set_video_source("camera")
+            self._emit_state()
+            return True
 
+        # Enumerate USB cameras if registry is empty
+        sources = self._cam_mgr.list_sources()
+        if not sources:
+            self._cam_mgr.enumerate_usb_cameras(max_index=3)
+            sources = self._cam_mgr.list_sources()
+
+        if not sources:
+            return False
+
+        success = self._cam_mgr.select(sources[0]["source_id"])
         if success:
             self.state.set_video_source("camera")
             self._emit_state()
-
         return success
 
     @Slot(result=bool)
     def cameraIsOpen(self):
-        return self.camera.is_open()
-
+        active = self._cam_mgr.get_active()
+        return active is not None and active.is_connected()
 
     @Slot()
     def stopCamera(self):
-        self.camera.release()
+        active = self._cam_mgr.get_active()
+        if active:
+            active.disconnect()
         self.state.set_video_source(None)
         self._emit_state()
+
     @Slot(str)
     def selectVideoSource(self, source):
         self.state.set_video_source(source)
@@ -152,9 +169,9 @@ class Bridge(QObject):
             self.logMessage.emit("Recording already in progress.", "WARN")
             return
 
-        if not self.camera.is_open():
+        if not self.cameraIsOpen():
             self.startCamera()
-            if not self.camera.is_open():
+            if not self.cameraIsOpen():
                 self.logMessage.emit("Cannot record: camera not available.", "ERR")
                 return
 
@@ -234,9 +251,9 @@ class Bridge(QObject):
             self.logMessage.emit("Streaming already active.", "WARN")
             return url
 
-        if not self.camera.is_open():
+        if not self.cameraIsOpen():
             self.startCamera()
-            if not self.camera.is_open():
+            if not self.cameraIsOpen():
                 self.logMessage.emit("Cannot stream: camera not available.", "ERR")
                 return ""
 
@@ -268,7 +285,7 @@ class Bridge(QObject):
     # Override getCameraFrame to also feed frames to the recorder/streamer
     @Slot(result=str)
     def getCameraFrame(self):
-        frame = self.camera.read()
+        frame = self._cam_mgr.read()
 
         if frame is None:
             return ""
@@ -324,6 +341,69 @@ class Bridge(QObject):
         else:
             self._slog.info(f"[UI] {message}")
 
+    # ================================================================== #
+    #  PHASE A2 — Camera Source Management
+    # ================================================================== #
+
+    @Slot(result=str)
+    def listCameraSources(self):
+        """Return JSON array of all registered camera sources with status."""
+        return json.dumps(self._cam_mgr.list_sources())
+
+    @Slot(result=str)
+    def enumerateUSBCameras(self):
+        """Probe USB indices 0-4 and return the source_ids found."""
+        found = self._cam_mgr.enumerate_usb_cameras(max_index=5)
+        return json.dumps(found)
+
+    @Slot(str, str, result=str)
+    def addIPCamera(self, url, label):
+        """Register an IP camera by its stream URL. Returns its source_id."""
+        source_id = self._cam_mgr.add_ip_camera(url, label=label or None)
+        self._slog.info(f"Registered IP camera: {source_id}")
+        return source_id
+
+    @Slot(str, result=bool)
+    def selectCameraSource(self, source_id):
+        """Select and connect a specific camera source by its source_id."""
+        success = self._cam_mgr.select(source_id)
+        if success:
+            self.state.set_video_source("camera")
+            self._slog.info(f"Camera selected: {source_id}")
+            self._emit_state()
+        else:
+            self._slog.error(f"Failed to select camera: {source_id}")
+        return success
+
+    # ================================================================== #
+    #  PHASE A3 — Camera Capabilities & Readiness
+    # ================================================================== #
+
+    @Slot(result=str)
+    def getCameraCapabilities(self):
+        """Return JSON capabilities of the active camera source."""
+        caps = self._cam_mgr.get_capabilities()
+        if caps:
+            return json.dumps(caps.to_dict())
+        return json.dumps(None)
+
+    @Slot(result=str)
+    def getCameraStatus(self):
+        """Return JSON status of the active camera source."""
+        status = self._cam_mgr.get_status()
+        if status:
+            return json.dumps(status.to_dict())
+        return json.dumps(None)
+
+    @Slot(result=str)
+    def cameraReadinessCheck(self):
+        """
+        Phase A3 readiness gate.
+        Returns JSON: { ready: bool, source_id: str, checks: [...] }
+        """
+        result = self._cam_mgr.readiness_check()
+        return json.dumps(result)
+
     # --- Cleanup ---
     def shutdown(self):
         """Release all resources on app exit."""
@@ -331,6 +411,6 @@ class Bridge(QObject):
             self.stopRecording()
         if self._streamer.is_running:
             self.stopStreaming()
-        self.stopCamera()
+        self._cam_mgr.disconnect_all()
         self._recorder.shutdown()
         self._voice.shutdown()
