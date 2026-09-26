@@ -285,8 +285,67 @@ These decisions were made before this log was created. They are documented here 
 - **Code Change Summary:** Relocated 4 manual test scripts and 4 documentation files. Added `pytest.ini`.
 
 
-<!-- 
-TEMPLATE FOR NEW ENTRIES:
+### [DECISION-016] Git Commit and Pull Request
+- **Date:** 2026-09-16
+- **Status:** IMPLEMENTED
+- **Category:** ARCHITECTURE
+- **Files Changed:** All newly created and refactored files
+- **Reason:** Completed the AI perception pipeline implementation, file deduplication, and repository cleanup per the user's instructions. Pushing the codebase to GitHub ensures remote backup and enables team code review before merging into the main application.
+- **Consideration:** Considered pushing to a fork, but we had direct push access to the `upstream` (`Priyansh07x/BAS-Monitor`) repository's `Prathmesh` branch, saving a step. A Pull Request to `main` was created to maintain standard CI/CD and review workflows.
+- **Decision:** Committed 50 file changes (2731 insertions, 1194 deletions). Pushed directly to `upstream Prathmesh` branch. Opened PR #7 against `main`.
+- **Code Change Summary:** Successfully committed and pushed the codebase. Opened PR: https://github.com/Priyansh07x/BAS-Monitor/pull/7.
+
+---
+
+### [DECISION-017] Create and Execute AI Verification Script
+- **Date:** 2026-09-16
+- **Status:** IMPLEMENTED
+- **Category:** TESTING
+- **Files Changed:** `check_ai.py` (Created), `ai_test_output.jpg` (Generated)
+- **Reason:** The user requested a tangible script to run the AI and prove that the backend AI pipeline (`inference_pipeline.py`) works outside of unit tests.
+- **Consideration:** Considered using live webcam, but automated execution via agentic terminal might block or fail due to macOS camera permissions. Used `data/videos/REC_20260905_165751.mp4` instead to safely process 10 frames and capture physical visual output.
+- **Decision:** Wrote `check_ai.py` to loop 10 frames through the orchestrator. Proved MediaPipe pose tracking, hand tracking, simulated object bounding boxes, and temporal action state tracking (`PICK_CONTAINER`) perfectly coordinate.
+- **Code Change Summary:** Wrote and ran `check_ai.py`, which verified zero-error AI inference and saved an annotated frame to `ai_test_output.jpg`.
+
+---
+
+### [DECISION-018] Reorganize AI Verification Script and Outputs
+- **Date:** 2026-09-16
+- **Status:** IMPLEMENTED
+- **Category:** TESTING
+- **Files Changed:** `check_ai.py` (Moved to `tests/`), `ai_test_output.jpg` (Moved to `tests/test_results/`)
+- **Reason:** The user correctly pointed out that test scripts and their artifacts belong in the `tests/` directory to preserve standard project hierarchy and keep the root workspace tidy.
+- **Consideration:** Hardcoded paths in `check_ai.py` would fail if executed from a different working directory once moved. Re-wrote the script to dynamically resolve its parent project root, ensuring imports and relative asset loading remain robust.
+- **Decision:** Moved `check_ai.py` to `tests/check_ai.py`. Directed all output artifacts into a new `tests/test_results/` directory.
+- **Code Change Summary:** Relocated files, added dynamic `sys.path` resolution to the python script, and created the `tests/test_results/` output folder.
+
+---
+
+### [DECISION-019] TTS Debounce, Config Loading, and Live Verification
+- **Date:** 2026-09-16
+- **Status:** IMPLEMENTED
+- **Category:** ARCHITECTURE
+- **Files Changed:** `backend/voice/voice_alert.py`, `config/settings.json`, `tests/check_tts.py` (Created)
+- **Reason:** Review of the TTS implementation plan revealed 3 gaps in the existing `voice_alert.py`: (1) No debounce/cooldown — if the AI detects an error for 30 consecutive frames, it would queue 30 identical spoken warnings causing a robotic backlog. (2) The singleton factory (`get_voice_service()`) never read `config/settings.json`, so user preferences for rate, volume, and enabled were ignored. (3) No live audio verification test existed — all unit tests ran with `enabled=False`.
+- **Consideration:** Considered using a separate rate-limiter class, but a simple dict-based timestamp lookup inside `speak()` is lightweight, has zero dependencies, and is thread-safe for our single-writer pattern.
+- **Decision:** Added a `cooldown_seconds` parameter (default 5.0s) and a `_last_spoken` dict to `VoiceAlertService`. Identical messages within the cooldown window are silently dropped. Rewrote `get_voice_service()` to load voice config from `config/settings.json`. Added `cooldown_seconds` to `settings.json`. Created `tests/check_tts.py` for live audio verification.
+- **Code Change Summary:** 3 files modified/created. All 20 tests pass (2 voice unit tests + 18 functionality tests). The TTS system now properly debounces, loads user config, and can be audibly verified.
+
+---
+
+### [DECISION-020] TTS Voice Selection & Granular Announce Toggles
+- **Date:** 2026-09-22
+- **Status:** IMPLEMENTED
+- **Category:** CONFIG
+- **Files Changed:** `backend/voice/voice_alert.py`
+- **Reason:** Review of TTS implementation plan against codebase revealed 2 remaining gaps: (1) The macOS `say` command was invoked without the `-v` flag, so the `voice_id` field in `config/settings.json` (e.g. `"Samantha"`, `"Alex"`) was silently ignored on macOS — the system always used the default voice. (2) The `announce_steps` and `announce_warnings` booleans already existed in `settings.json` but were never read by `get_voice_service()` or enforced in the alert helper methods, meaning users could not independently mute step-progression announcements from warning alerts.
+- **Consideration:** Considered adding the guards inside `sequence_validator.py` instead of `voice_alert.py`, but placing them in the `VoiceAlertService` helper methods keeps the responsibility contained within the voice module and avoids leaking voice config into the FSM layer.
+- **Decision:** (1) Modified `_dispatch_speech()` to build the macOS `say` command dynamically — when `self.voice_id` is set, `-v <voice_id>` is appended before the text argument. (2) Added `announce_steps` and `announce_warnings` parameters to `VoiceAlertService.__init__()` (both default `True`). Gated `alert_next_step()` with `announce_steps` and `alert_out_of_order()`/`alert_skipped_step()` with `announce_warnings`. Updated `get_voice_service()` to load both flags from `settings.json`.
+- **Code Change Summary:** 1 file modified (`backend/voice/voice_alert.py`). All 10 tests pass. The macOS TTS now respects user-selected voices and the announce toggles in `settings.json` are fully enforced.
+
+---
+
+<!-- TEMPLATE FOR NEW ENTRIES:
 
 ### [DECISION-XXX] Title
 - **Date:** YYYY-MM-DD
@@ -297,5 +356,14 @@ TEMPLATE FOR NEW ENTRIES:
 - **Consideration:** 
 - **Decision:** 
 - **Code Change Summary:** 
-
 -->
+
+### [DECISION-021] Phase A2/A3 — Camera Abstraction & Readiness Detection
+- **Date:** 2026-09-26
+- **Status:** IMPLEMENTED
+- **Category:** ARCHITECTURE
+- **Files Changed:** `backend/video/camera_source.py` (new), `backend/video/usb_camera.py` (new), `backend/video/ip_camera.py` (new), `backend/video/camera_manager.py` (new), `backend/app_state.py` (modified), `backend/bridge.py` (modified), `tests/test_camera_manager.py` (new)
+- **Reason:** Workstream A Phase A2 requires a unified `CameraSource` interface so the rest of BAS-Monitor is decoupled from the physical camera transport (USB, CSI, IP, Android). Phase A3 requires genuine hardware capability probing (resolution, FPS, autofocus, zoom, PTZ) and a pre-experiment readiness gate.
+- **Consideration:** Could have extended the existing `Camera` class with conditionals, but that would grow into an unmaintainable monolith. The Strategy/Adapter pattern (abstract base class + concrete adapters) cleanly separates each transport's logic and allows new camera types to be added without modifying existing code.
+- **Decision:** Created `CameraSource` (ABC), `USBCamera` (adapter with genuine OpenCV capability probing), `IPCamera` (adapter for RTSP/MJPEG streams), and `CameraManager` (central registry + singleton). Migrated `AppState` and `Bridge` from the old `Camera` class to `CameraManager`. Added backward-compatible aliases (`open()`, `release()`, `is_open()`) on `CameraSource` so existing code paths remain functional. Added 6 new Bridge slots: `listCameraSources`, `enumerateUSBCameras`, `addIPCamera`, `selectCameraSource`, `getCameraCapabilities`, `getCameraStatus`, `cameraReadinessCheck`.
+- **Code Change Summary:** 4 new files, 2 modified files, 1 new test file (25 tests). Full test suite: 35/35 PASS.
