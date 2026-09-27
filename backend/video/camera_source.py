@@ -5,6 +5,9 @@ Phase A2: Every camera type (USB, CSI, IP, Android) must implement this
 interface so the rest of BAS-Monitor is decoupled from the physical source.
 
 Phase A3: get_capabilities() returns only genuinely supported features.
+
+Phase A5: set_focus(), set_zoom(), set_resolution() provide capability-
+aware hardware controls.  Default implementations are safe no-ops.
 """
 
 from __future__ import annotations
@@ -62,6 +65,12 @@ class CameraCapabilities:
     supports_digital_zoom: bool = False
     supports_ptz: bool = False
 
+    # Phase A5 — control ranges (None = not queryable)
+    focus_range: Optional[tuple[float, float]] = None   # (min, max)
+    current_focus: Optional[float] = None
+    zoom_range: Optional[tuple[float, float]] = None    # (min, max)
+    current_zoom: Optional[float] = None
+
     # Backend / codec info
     backend_name: str = ""
 
@@ -76,6 +85,10 @@ class CameraCapabilities:
             "supports_optical_zoom": self.supports_optical_zoom,
             "supports_digital_zoom": self.supports_digital_zoom,
             "supports_ptz": self.supports_ptz,
+            "focus_range": list(self.focus_range) if self.focus_range else None,
+            "current_focus": self.current_focus,
+            "zoom_range": list(self.zoom_range) if self.zoom_range else None,
+            "current_zoom": self.current_zoom,
             "backend_name": self.backend_name,
         }
 
@@ -114,7 +127,8 @@ class CameraSource(ABC):
     Lifecycle:
         connect()  →  read()  →  disconnect()
 
-    Subclasses MUST implement the four abstract methods.
+    Subclasses MUST implement the five abstract methods.
+    Phase A5 control methods have safe default no-ops.
     """
 
     # ---- lifecycle ------------------------------------------------ #
@@ -159,6 +173,26 @@ class CameraSource(ABC):
         """
         ...
 
+    # ---- Phase A5 — hardware controls ---------------------------- #
+    # Default implementations are safe no-ops.  Subclasses override
+    # only when the hardware genuinely supports the control.
+
+    def set_autofocus(self, enabled: bool) -> bool:
+        """Enable or disable autofocus.  Returns True if accepted."""
+        return False
+
+    def set_focus(self, value: float) -> bool:
+        """Set manual focus value.  Returns True if accepted."""
+        return False
+
+    def set_zoom(self, value: float) -> bool:
+        """Set optical zoom level.  Returns True if accepted."""
+        return False
+
+    def set_resolution(self, width: int, height: int) -> bool:
+        """Change capture resolution.  Returns True if accepted."""
+        return False
+
     # ---- convenience --------------------------------------------- #
 
     def is_connected(self) -> bool:
@@ -174,3 +208,4 @@ class CameraSource(ABC):
 
     def is_open(self) -> bool:
         return self.is_connected()
+

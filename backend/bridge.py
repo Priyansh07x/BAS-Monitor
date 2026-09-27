@@ -28,6 +28,9 @@ class Bridge(QObject):
     # Streaming signals
     streamStarted = Signal(str)
     streamStopped = Signal()
+
+    # Phase A4 — failover notification
+    cameraFailover = Signal(str)     # emits JSON FailoverEvent
     
     logMessage = Signal(str, str)
     recTimerTick = Signal(str)
@@ -43,6 +46,9 @@ class Bridge(QObject):
         self._rec_seconds = 0
         self._rec_timer = None
         self._voice = get_voice_service()
+
+        # Phase A4 — wire failover callback for operator notification
+        self._cam_mgr.set_failover_callback(self._on_camera_failover)
 
     @Slot(result=str)
     def getExperiments(self):
@@ -403,6 +409,97 @@ class Bridge(QObject):
         """
         result = self._cam_mgr.readiness_check()
         return json.dumps(result)
+
+    # ================================================================== #
+    #  PHASE A4 — Camera Lock & Failover
+    # ================================================================== #
+
+    @Slot(result=bool)
+    def lockCamera(self):
+        """Lock the active camera for experiment use. Prevents manual switching."""
+        success = self._cam_mgr.lock()
+        if success:
+            self._slog.info(f"Camera locked: {self._cam_mgr.get_active_id()}")
+        else:
+            self._slog.error("Cannot lock camera: no active camera connected")
+        return success
+
+    @Slot()
+    def unlockCamera(self):
+        """Unlock the camera after experiment ends."""
+        self._cam_mgr.unlock()
+        self._slog.info("Camera unlocked")
+
+    @Slot(result=bool)
+    def isCameraLocked(self):
+        """Check if the camera is currently locked for an experiment."""
+        return self._cam_mgr.is_locked
+
+    @Slot(result=str)
+    def getFailoverHistory(self):
+        """Return JSON array of all failover events."""
+        return json.dumps(self._cam_mgr.get_failover_history())
+
+    def _on_camera_failover(self, event):
+        """
+        Phase A4 callback — invoked by CameraManager on failover.
+        Never silently switches viewpoints: logs, emits signal, and
+        speaks an alert to the operator.
+        """
+        event_json = json.dumps(event.to_dict())
+        self.cameraFailover.emit(event_json)
+
+        if event.success:
+            msg = f"Camera failover: switched from {event.from_source} to {event.to_source}"
+            self._slog.warn(msg)
+            self.logMessage.emit(msg, "WARN")
+            self._voice.speak(
+                f"Warning: camera switched from {event.from_source} to {event.to_source}",
+                priority=True,
+            )
+        else:
+            msg = f"Camera failover FAILED: {event.reason}"
+            self._slog.error(msg)
+            self.logMessage.emit(msg, "ERR")
+            self._voice.speak("Critical: all cameras have failed", priority=True)
+
+    # ================================================================== #
+    #  PHASE A5 — Camera Hardware Controls
+    # ================================================================== #
+
+    @Slot(bool, result=bool)
+    def setCameraAutofocus(self, enabled):
+        """Enable or disable autofocus on the active camera."""
+        success = self._cam_mgr.set_autofocus(enabled)
+        if success:
+            self._slog.info(f"Autofocus {'enabled' if enabled else 'disabled'}")
+        return success
+
+    @Slot(float, result=bool)
+    def setCameraFocus(self, value):
+        """Set manual focus value on the active camera."""
+        success = self._cam_mgr.set_focus(value)
+        if success:
+            self._slog.info(f"Manual focus set to {value}")
+        return success
+
+    @Slot(float, result=bool)
+    def setCameraZoom(self, value):
+        """Set optical zoom level on the active camera."""
+        success = self._cam_mgr.set_zoom(value)
+        if success:
+            self._slog.info(f"Zoom set to {value}")
+        return success
+
+    @Slot(int, int, result=bool)
+    def setCameraResolution(self, width, height):
+        """Change capture resolution on the active camera."""
+        success = self._cam_mgr.set_resolution(width, height)
+        if success:
+            self._slog.info(f"Resolution set to {width}x{height}")
+        else:
+            self._slog.warn(f"Resolution {width}x{height} not accepted by camera")
+        return success
 
     # --- Cleanup ---
     def shutdown(self):

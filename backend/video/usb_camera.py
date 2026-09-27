@@ -4,6 +4,10 @@ usb_camera.py -- USB / local webcam CameraSource adapter.
 Phase A2: Replaces the old monolithic Camera class with a proper
 CameraSource implementation.  All capability probing (Phase A3) is
 real — nothing is invented.
+
+Phase A5: Implements capability-aware hardware controls for focus,
+zoom, and resolution.  Controls are safe no-ops when the hardware
+does not support them.
 """
 
 from __future__ import annotations
@@ -119,6 +123,55 @@ class USBCamera(CameraSource):
         return self._capabilities
 
     # ------------------------------------------------------------------ #
+    #  Phase A5 — Hardware controls
+    # ------------------------------------------------------------------ #
+
+    def set_autofocus(self, enabled: bool) -> bool:
+        """Enable or disable autofocus.  Only works if probed as supported."""
+        if self._cap is None or not self._cap.isOpened():
+            return False
+        if not self._capabilities.supports_autofocus:
+            return False
+        self._cap.set(cv2.CAP_PROP_AUTOFOCUS, 1 if enabled else 0)
+        actual = self._cap.get(cv2.CAP_PROP_AUTOFOCUS)
+        return actual == (1 if enabled else 0)
+
+    def set_focus(self, value: float) -> bool:
+        """Set manual focus.  Only works if manual focus is supported."""
+        if self._cap is None or not self._cap.isOpened():
+            return False
+        if not self._capabilities.supports_manual_focus:
+            return False
+        # Disable autofocus first so manual value takes effect
+        self._cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+        self._cap.set(cv2.CAP_PROP_FOCUS, value)
+        actual = self._cap.get(cv2.CAP_PROP_FOCUS)
+        self._capabilities.current_focus = actual
+        return True
+
+    def set_zoom(self, value: float) -> bool:
+        """Set optical zoom level.  Only works if optical zoom is supported."""
+        if self._cap is None or not self._cap.isOpened():
+            return False
+        if not self._capabilities.supports_optical_zoom:
+            return False
+        self._cap.set(cv2.CAP_PROP_ZOOM, value)
+        actual = self._cap.get(cv2.CAP_PROP_ZOOM)
+        self._capabilities.current_zoom = actual
+        return True
+
+    def set_resolution(self, width: int, height: int) -> bool:
+        """Change the capture resolution."""
+        if self._cap is None or not self._cap.isOpened():
+            return False
+        self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        actual_w = int(self._cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        actual_h = int(self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self._capabilities.current_resolution = (actual_w, actual_h)
+        return actual_w == width and actual_h == height
+
+    # ------------------------------------------------------------------ #
     #  Internal: genuine capability probing
     # ------------------------------------------------------------------ #
 
@@ -166,6 +219,8 @@ class USBCamera(CameraSource):
         # ---- probe focus ----------------------------------------- #
         supports_autofocus = False
         supports_manual_focus = False
+        focus_range: Optional[tuple[float, float]] = None
+        current_focus: Optional[float] = None
 
         # Check if autofocus property is readable / settable
         autofocus_val = cap.get(cv2.CAP_PROP_AUTOFOCUS)
@@ -180,14 +235,38 @@ class USBCamera(CameraSource):
             # restore
             cap.set(cv2.CAP_PROP_AUTOFOCUS, autofocus_val)
 
+        # Probe focus range if manual focus is supported
+        if supports_manual_focus:
+            current_focus = cap.get(cv2.CAP_PROP_FOCUS)
+            # Try to discover the range by setting extremes
+            cap.set(cv2.CAP_PROP_FOCUS, 0)
+            focus_min = cap.get(cv2.CAP_PROP_FOCUS)
+            cap.set(cv2.CAP_PROP_FOCUS, 10000)
+            focus_max = cap.get(cv2.CAP_PROP_FOCUS)
+            if focus_max > focus_min:
+                focus_range = (focus_min, focus_max)
+            # Restore
+            if current_focus is not None:
+                cap.set(cv2.CAP_PROP_FOCUS, current_focus)
+
         # ---- probe zoom ----------------------------------------- #
         supports_optical_zoom = False
+        zoom_range: Optional[tuple[float, float]] = None
+        current_zoom: Optional[float] = None
         zoom_val = cap.get(cv2.CAP_PROP_ZOOM)
         if zoom_val > 0:
+            current_zoom = zoom_val
             # Try to change zoom; if it sticks the camera supports it
             cap.set(cv2.CAP_PROP_ZOOM, zoom_val + 1)
             if cap.get(cv2.CAP_PROP_ZOOM) != zoom_val:
                 supports_optical_zoom = True
+                # Probe range
+                cap.set(cv2.CAP_PROP_ZOOM, 0)
+                zoom_min = cap.get(cv2.CAP_PROP_ZOOM)
+                cap.set(cv2.CAP_PROP_ZOOM, 10000)
+                zoom_max = cap.get(cv2.CAP_PROP_ZOOM)
+                if zoom_max > zoom_min:
+                    zoom_range = (zoom_min, zoom_max)
             cap.set(cv2.CAP_PROP_ZOOM, zoom_val)
 
         # FPS range: we can only test what OpenCV reports
@@ -203,5 +282,9 @@ class USBCamera(CameraSource):
             supports_optical_zoom=supports_optical_zoom,
             supports_digital_zoom=False,  # OpenCV has no digital zoom API
             supports_ptz=False,           # USB cams generally don't support PTZ
+            focus_range=focus_range,
+            current_focus=current_focus,
+            zoom_range=zoom_range,
+            current_zoom=current_zoom,
             backend_name=backend_name,
         )

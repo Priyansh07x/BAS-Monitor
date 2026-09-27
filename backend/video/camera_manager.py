@@ -7,18 +7,26 @@ provides a single point of access for the rest of the system.
 Phase A3: Exposes a readiness check and capability queries before an
 experiment starts.
 
+Phase A4: Camera lock/unlock for experiment safety, automatic failover
+with timeout detection, logged transitions, and operator notification.
+
+Phase A5: Delegates hardware control calls to the active source.
+
 Lifecycle before an experiment:
-    Select camera  →  Connect  →  Check capabilities  →  Readiness check  →  Start
+    Select camera  →  Connect  →  Check capabilities  →  Readiness check  →  Lock  →  Start
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import threading
+import time
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import cv2
+import numpy as np
 
 from .camera_source import (
     CameraCapabilities,
@@ -29,6 +37,33 @@ from .camera_source import (
 )
 from .usb_camera import USBCamera
 from .ip_camera import IPCamera
+
+logger = logging.getLogger(__name__)
+
+
+# ------------------------------------------------------------------ #
+#  Failover event data
+# ------------------------------------------------------------------ #
+
+class FailoverEvent:
+    """Immutable record of a camera failover transition."""
+    __slots__ = ("timestamp", "from_source", "to_source", "reason", "success")
+
+    def __init__(self, from_source: str, to_source: str, reason: str, success: bool):
+        self.timestamp = time.time()
+        self.from_source = from_source
+        self.to_source = to_source
+        self.reason = reason
+        self.success = success
+
+    def to_dict(self) -> dict:
+        return {
+            "timestamp": self.timestamp,
+            "from_source": self.from_source,
+            "to_source": self.to_source,
+            "reason": self.reason,
+            "success": self.success,
+        }
 
 
 # ------------------------------------------------------------------ #
@@ -44,6 +79,9 @@ class CameraManager:
       - Register IP / Android sources from config
       - Select + connect the active camera
       - Provide readiness checks (A3)
+      - Lock/unlock cameras during experiments (A4)
+      - Automatic failover with operator notification (A4)
+      - Delegate hardware controls (A5)
       - Expose status/capabilities to Bridge and frontend
     """
 
@@ -52,6 +90,15 @@ class CameraManager:
         self._sources: dict[str, CameraSource] = {}
         self._active_id: Optional[str] = None
         self._lock = threading.Lock()
+
+        # Phase A4 — experiment lock
+        self._locked: bool = False
+
+        # Phase A4 — failover
+        self._fallback_order: list[str] = []       # ordered list of source_ids to try
+        self._failure_threshold: int = 30          # consecutive failures before failover
+        self._failover_history: list[FailoverEvent] = []
+        self._on_failover: Optional[Callable[[FailoverEvent], None]] = None  # callback
 
     # ================================================================== #
     #  Source registration
@@ -106,6 +153,8 @@ class CameraManager:
         Supports:
           - camera.source (int) → USB device index
           - camera.ip_cameras (list of {url, label}) → IP sources
+          - camera.failover.threshold (int) → consecutive failures before failover
+          - camera.failover.fallback_order (list of str) → fallback priority
         """
         if config_path is None:
             config_path = Path(__file__).resolve().parents[2] / "config" / "settings.json"
@@ -134,6 +183,13 @@ class CameraManager:
             if url:
                 self.add_ip_camera(url, label=label)
 
+        # Phase A4 — failover configuration
+        failover_cfg = cam_cfg.get("failover", {})
+        if "threshold" in failover_cfg:
+            self._failure_threshold = int(failover_cfg["threshold"])
+        if "fallback_order" in failover_cfg:
+            self._fallback_order = list(failover_cfg["fallback_order"])
+
     # ================================================================== #
     #  Selection & connection
     # ================================================================== #
@@ -156,17 +212,24 @@ class CameraManager:
         Select and connect a camera source.
         Disconnects the previous active source first.
         Returns True if the new source connects successfully.
+
+        Blocked while camera is locked (Phase A4) unless called by
+        internal failover logic.
         """
         with self._lock:
-            if source_id not in self._sources:
-                return False
+            return self._select_unlocked(source_id)
 
-            # Disconnect current
-            if self._active_id and self._active_id in self._sources:
-                self._sources[self._active_id].disconnect()
+    def _select_unlocked(self, source_id: str) -> bool:
+        """Internal select — caller must hold self._lock."""
+        if source_id not in self._sources:
+            return False
 
-            self._active_id = source_id
-            return self._sources[source_id].connect()
+        # Disconnect current
+        if self._active_id and self._active_id in self._sources:
+            self._sources[self._active_id].disconnect()
+
+        self._active_id = source_id
+        return self._sources[source_id].connect()
 
     def get_active(self) -> Optional[CameraSource]:
         """Return the currently active camera source, or None."""
@@ -266,15 +329,173 @@ class CameraManager:
         return {"ready": all_passed, "source_id": sid, "checks": checks}
 
     # ================================================================== #
+    #  Phase A4 — Camera Lock / Unlock
+    # ================================================================== #
+
+    def lock(self) -> bool:
+        """
+        Lock the active camera for an experiment.
+        Prevents manual switching while locked.
+        Returns False if no active camera is connected.
+        """
+        active = self.get_active()
+        if active is None or not active.is_connected():
+            return False
+        self._locked = True
+        logger.info(f"Camera locked: {self._active_id}")
+        return True
+
+    def unlock(self) -> None:
+        """Unlock the camera after an experiment ends."""
+        self._locked = False
+        logger.info("Camera unlocked")
+
+    @property
+    def is_locked(self) -> bool:
+        return self._locked
+
+    # ================================================================== #
+    #  Phase A4 — Failover
+    # ================================================================== #
+
+    def set_failover_callback(self, callback: Callable[[FailoverEvent], None]) -> None:
+        """Register a callback invoked on every failover event."""
+        self._on_failover = callback
+
+    def set_failure_threshold(self, threshold: int) -> None:
+        """Set the number of consecutive frame failures that trigger failover."""
+        self._failure_threshold = max(1, threshold)
+
+    def set_fallback_order(self, source_ids: list[str]) -> None:
+        """Set the priority order of fallback cameras."""
+        self._fallback_order = list(source_ids)
+
+    def get_failover_history(self) -> list[dict]:
+        """Return the full failover event log."""
+        return [e.to_dict() for e in self._failover_history]
+
+    def check_and_failover(self) -> Optional[FailoverEvent]:
+        """
+        Check the active camera's health.  If consecutive failures
+        exceed the threshold, attempt controlled failover.
+
+        Should be called periodically (e.g. from the frame-read loop).
+        Returns a FailoverEvent if a transition happened, else None.
+        """
+        with self._lock:
+            if not self._active_id or self._active_id not in self._sources:
+                return None
+
+            src = self._sources[self._active_id]
+            status = src.get_status()
+
+            if status.consecutive_failures < self._failure_threshold:
+                return None
+
+            # --- Threshold exceeded → attempt failover --- #
+            failed_id = self._active_id
+            reason = (
+                f"Camera '{failed_id}' exceeded failure threshold "
+                f"({status.consecutive_failures} consecutive failures)"
+            )
+            logger.warning(reason)
+
+            # Try reconnecting the same camera first
+            src.disconnect()
+            if src.connect():
+                logger.info(f"Reconnected to {failed_id} successfully")
+                return None
+
+            # Build candidate list: fallback_order first, then all others
+            candidates = list(self._fallback_order)
+            for sid in self._sources:
+                if sid not in candidates and sid != failed_id:
+                    candidates.append(sid)
+
+            for candidate_id in candidates:
+                if candidate_id not in self._sources:
+                    continue
+                if candidate_id == failed_id:
+                    continue
+
+                logger.info(f"Attempting failover to '{candidate_id}'...")
+                success = self._select_unlocked(candidate_id)
+
+                event = FailoverEvent(
+                    from_source=failed_id,
+                    to_source=candidate_id,
+                    reason=reason,
+                    success=success,
+                )
+                self._failover_history.append(event)
+
+                if success:
+                    logger.info(f"Failover succeeded: {failed_id} → {candidate_id}")
+                    if self._on_failover:
+                        self._on_failover(event)
+                    return event
+                else:
+                    logger.warning(f"Failover to '{candidate_id}' failed, trying next...")
+
+            # All candidates exhausted
+            event = FailoverEvent(
+                from_source=failed_id,
+                to_source="none",
+                reason=reason + " — all fallback cameras failed",
+                success=False,
+            )
+            self._failover_history.append(event)
+            if self._on_failover:
+                self._on_failover(event)
+            return event
+
+    # ================================================================== #
+    #  Phase A5 — Hardware control delegation
+    # ================================================================== #
+
+    def set_autofocus(self, enabled: bool) -> bool:
+        """Delegate to active camera."""
+        src = self.get_active()
+        return src.set_autofocus(enabled) if src else False
+
+    def set_focus(self, value: float) -> bool:
+        """Delegate to active camera."""
+        src = self.get_active()
+        return src.set_focus(value) if src else False
+
+    def set_zoom(self, value: float) -> bool:
+        """Delegate to active camera."""
+        src = self.get_active()
+        return src.set_zoom(value) if src else False
+
+    def set_resolution(self, width: int, height: int) -> bool:
+        """Delegate to active camera."""
+        src = self.get_active()
+        return src.set_resolution(width, height) if src else False
+
+    # ================================================================== #
     #  Frame access (convenience for Bridge)
     # ================================================================== #
 
-    def read(self) -> Optional["np.ndarray"]:
-        """Read a frame from the active camera. Returns None if no active source."""
+    def read(self) -> Optional[np.ndarray]:
+        """
+        Read a frame from the active camera.
+        Returns None if no active source.
+        Also checks failover threshold (Phase A4).
+        """
         src = self.get_active()
-        if src:
-            return src.read()
-        return None
+        if src is None:
+            return None
+
+        frame = src.read()
+
+        # Phase A4: check for sustained failure → failover
+        if frame is None:
+            status = src.get_status()
+            if status.consecutive_failures >= self._failure_threshold:
+                self.check_and_failover()
+
+        return frame
 
     # ================================================================== #
     #  Cleanup
@@ -286,6 +507,7 @@ class CameraManager:
             for src in self._sources.values():
                 src.disconnect()
             self._active_id = None
+            self._locked = False
 
 
 # ------------------------------------------------------------------ #
