@@ -1236,10 +1236,8 @@ function deleteExperiment(experimentId) {
         state.isPaused = !state.isPaused;
         if (state.isPaused) {
             log("Analysis paused.", "AI");
-            if (elements.videoElement) elements.videoElement.pause();
         } else {
             log("Analysis resumed.", "AI");
-            if (elements.videoElement) elements.videoElement.play();
         }
     }
 
@@ -1249,7 +1247,6 @@ function deleteExperiment(experimentId) {
         clearInterval(state.analysisInterval);
         
         if (elements.aiDetectionOverlay) elements.aiDetectionOverlay.classList.add('hidden');
-        if (elements.videoElement) elements.videoElement.pause();
         
         clearCanvas();
         log("Analysis pipeline stopped.", "AI");
