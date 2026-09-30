@@ -1,0 +1,232 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-001",
+  "experiment_version": "1.0.0",
+  "experiment_name": "Microgravity Sample Transfer and Containment Procedure",
+  "generated_by": "Gate B4.0 — Orientation & Robustness Strategy Specification",
+  "date": "2026-09-24",
+
+  "evaluation_status": "NOT_EVALUATED",
+  "evaluation_status_note": "No EXP-001 dataset has been collected under the B3 protocol and the Part-1 model is currently decoupled and under modification. No numerical evaluation metrics or benchmark results are contained in this specification.",
+
+  "canonical_procedure_actions": [
+    "PICK_RED",
+    "PLACE_RED",
+    "PICK_BLUE",
+    "PLACE_BLUE",
+    "CLOSE_LID"
+  ],
+
+  "canonical_objects": [
+    "RED_SAMPLE",
+    "BLUE_SAMPLE",
+    "SAMPLE_CONTAINER",
+    "CONTAINER_LID"
+  ],
+
+  "required_orientation_degrees": [0, 45, 90, 135, 180, 225, 270],
+
+  "orientation_categories": [
+    {
+      "category": "NORMAL",
+      "degrees": [0],
+      "description": "Standard upright camera orientation relative to payload holding rack."
+    },
+    {
+      "category": "MODERATE_ROTATION",
+      "degrees": [45, 135, 225],
+      "description": "Diagonal camera mounting or oblique operator perspective relative to rack axis."
+    },
+    {
+      "category": "EXTREME_ROTATION",
+      "degrees": [90, 180, 270],
+      "description": "Sideways transverse (90/270 deg) or fully inverted (180 deg) orientation in microgravity."
+    }
+  ],
+
+  "augmentation_dimensions": [
+    {
+      "dimension": "rotation",
+      "purpose": "Invariance to camera roll and astronaut body angle in microgravity",
+      "training_augmentation": true,
+      "evaluation_presence": true,
+      "evaluation_angles_deg": [0, 45, 90, 135, 180, 225, 270],
+      "proposed_training_range": "0 to 360 deg continuous rotation with keypoint affine synchronization",
+      "status": "PROPOSED — REQUIRES VALIDATION"
+    },
+    {
+      "dimension": "scale",
+      "purpose": "Robustness to variable camera-to-rack distance",
+      "training_augmentation": true,
+      "evaluation_presence": true,
+      "proposed_training_range": "0.8x to 1.2x zoom scaling",
+      "status": "PROPOSED — REQUIRES VALIDATION"
+    },
+    {
+      "dimension": "translation",
+      "purpose": "Invariance to payload rack position shift within camera field of view",
+      "training_augmentation": true,
+      "evaluation_presence": true,
+      "proposed_training_range": "-10% to +10% horizontal and vertical offset",
+      "status": "PROPOSED — REQUIRES VALIDATION"
+    },
+    {
+      "dimension": "brightness",
+      "purpose": "Robustness to payload bay illumination shifts and shadows",
+      "training_augmentation": true,
+      "evaluation_presence": true,
+      "proposed_training_range": "-20% to +20% gain / gamma adjustment",
+      "status": "PROPOSED — REQUIRES VALIDATION"
+    },
+    {
+      "dimension": "blur",
+      "purpose": "Invariance to rapid astronaut hand movement and edge camera jitter",
+      "training_augmentation": true,
+      "evaluation_presence": true,
+      "proposed_training_range": "Gaussian blur with sigma in [0.5, 1.5]",
+      "status": "PROPOSED — REQUIRES VALIDATION"
+    },
+    {
+      "dimension": "occlusion",
+      "purpose": "Robustness to hand occluding target sample or container opening during grasp",
+      "training_augmentation": true,
+      "evaluation_presence": true,
+      "proposed_training_range": "Cutout / Random Erasing up to 15% bounding area",
+      "status": "PROPOSED — REQUIRES VALIDATION"
+    },
+    {
+      "dimension": "perspective",
+      "purpose": "Invariance to oblique or overhead camera pitch angles",
+      "training_augmentation": true,
+      "evaluation_presence": true,
+      "proposed_training_range": "Perspective warp tilt up to 15 degrees",
+      "status": "PROPOSED — REQUIRES VALIDATION"
+    }
+  ],
+
+  "evaluation_subsets": [
+    {
+      "subset_id": "EVAL_NORMAL",
+      "description": "Standard upright 0 deg orientation, standard lighting, no occlusion (unperturbed baseline)",
+      "target_metric": "baseline_f1"
+    },
+    {
+      "subset_id": "EVAL_ORIENTATION",
+      "description": "Discrete evaluation angles (45, 90, 135, 180, 225, 270 deg)",
+      "target_metric": "per_angle_f1_and_delta"
+    },
+    {
+      "subset_id": "EVAL_OCCLUSION",
+      "description": "Partial and full hand-object visual occlusions",
+      "target_metric": "occlusion_f1_retention"
+    },
+    {
+      "subset_id": "EVAL_LIGHTING",
+      "description": "Bright, Dim, and Shadow illumination conditions",
+      "target_metric": "color_separation_f1"
+    },
+    {
+      "subset_id": "EVAL_VIEWPOINT",
+      "description": "Side, Overhead, and Oblique camera mounting angles",
+      "target_metric": "perspective_invariance_f1"
+    },
+    {
+      "subset_id": "EVAL_FAILURE",
+      "description": "Procedural violation sequences (FAILURE_WRONG_ACTION, etc.)",
+      "target_metric": "anomaly_detection_recall"
+    },
+    {
+      "subset_id": "EVAL_INCOMPLETE",
+      "description": "Incomplete or aborted actions (INCOMPLETE_APPROACH, etc.)",
+      "target_metric": "false_trigger_suppression_rate"
+    }
+  ],
+
+  "required_metrics": [
+    {
+      "metric_name": "per_angle_precision",
+      "definition": "Precision per angle theta in {0, 45, 90, 135, 180, 225, 270} across all 5 canonical actions",
+      "status": "FUTURE_EVALUATION_METRIC"
+    },
+    {
+      "metric_name": "per_angle_recall",
+      "definition": "Recall per angle theta in {0, 45, 90, 135, 180, 225, 270} across all 5 canonical actions",
+      "status": "FUTURE_EVALUATION_METRIC"
+    },
+    {
+      "metric_name": "per_angle_f1",
+      "definition": "Harmonic mean of precision and recall per angle theta",
+      "status": "FUTURE_EVALUATION_METRIC"
+    },
+    {
+      "metric_name": "macro_average_f1",
+      "definition": "Mean F1 score averaged across all 7 evaluation angles",
+      "status": "FUTURE_EVALUATION_METRIC"
+    },
+    {
+      "metric_name": "relative_angular_degradation",
+      "definition": "Delta F1_theta = F1_theta - F1_0deg representing performance change relative to baseline",
+      "status": "FUTURE_EVALUATION_METRIC"
+    },
+    {
+      "metric_name": "maximum_orientation_drop",
+      "definition": "Maximum drop between 0 deg baseline F1 and the lowest F1 among all 7 angles",
+      "proposed_target": "<= 15% drop",
+      "status": "FUTURE_EVALUATION_METRIC — PROPOSED TARGET"
+    },
+    {
+      "metric_name": "false_trigger_rate_incomplete",
+      "definition": "Percentage of incomplete actions incorrectly classified as valid step completions under perturbation",
+      "status": "FUTURE_EVALUATION_METRIC"
+    },
+    {
+      "metric_name": "latency_overhead_ms",
+      "definition": "Added milliseconds per frame when orientation rectification preprocessing is active",
+      "proposed_target": "<= 2.0 ms per frame",
+      "status": "FUTURE_EVALUATION_METRIC — PROPOSED TARGET"
+    }
+  ],
+
+  "leakage_policy": {
+    "strategy": "subject_level_split_isolation",
+    "rules": [
+      "All physical recordings and camera viewpoints for a given subject_id belong exclusively to one split (TRAIN, VALIDATION, or TEST).",
+      "Any synthetic transformation or augmentation (rotation, scale, lighting, blur) inherits the exact split of its parent source recording.",
+      "No augmented derivative of a TRAIN clip may ever appear in VALIDATION or TEST splits.",
+      "Evaluation orientation datasets must come exclusively from held-out TEST split subjects."
+    ]
+  },
+
+  "roadmap_stages": {
+    "B4.0": {
+      "name": "Orientation & Robustness Strategy Specification",
+      "status": "COMPLETED",
+      "deliverables": [
+        "docs/workstream-b-orientation-robustness.md",
+        "config/orientation_robustness_spec.json",
+        "tests/test_orientation_robustness.py"
+      ]
+    },
+    "B4.1": {
+      "name": "Robustness / Augmentation Implementation",
+      "status": "PENDING",
+      "deliverables": [
+        "backend/ai/augmentation.py (Synchronized image + keypoint transformation engine)",
+        "FrameProcessor orientation normalization hook",
+        "InteractionEngine OBB / centroid orientation robustness"
+      ]
+    },
+    "B4.2": {
+      "name": "Real-Data Robustness Evaluation",
+      "status": "PENDING",
+      "dependencies": [
+        "EXP-001 collected dataset (B3 protocol)",
+        "Trained 5-action Part-1 model"
+      ],
+      "deliverables": [
+        "Evaluation scorecard across all 7 angles",
+        "Degradation delta tables"
+      ]
+    }
+  }
+}

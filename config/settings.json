@@ -6,6 +6,21 @@
     "fps": 30.0,
     "buffer_size": 1
   },
+  "rectification": {
+    "enabled": false,
+    "rotation_deg": 0.0,
+    "scale": 1.0,
+    "translation_x": 0.0,
+    "translation_y": 0.0,
+    "affine_matrix": null,
+    "homography_matrix": null,
+    "output_size": null,
+    "border_mode": "constant",
+    "border_value": [0, 0, 0],
+    "interpolation": "bilinear",
+    "calibration_status": "UNSPECIFIED",
+    "calibration_notes": "PROPOSED DEFAULT — REQUIRES EXPERIMENTAL CALIBRATION"
+  },
   "ai": {
     "vision_hef_path": "data/vision_pipeline.hef",
     "temporal_tflite_path": "data/temporal_action.tflite",

@@ -36,10 +36,20 @@ class ActionRecognizer:
         self,
         keypoint_vector: np.ndarray,
         interaction_state: Optional[str] = None,
+        target_object: Optional[str] = None,
+        interaction: Optional[Dict[str, Any]] = None,
+        objects: Optional[List[Dict[str, Any]]] = None,
+        hands: Optional[List[Dict[str, Any]]] = None,
     ) -> Tuple[str, float]:
         """Feed a vector and return the classified action and confidence score."""
         self.classifier.push_frame_vector(keypoint_vector)
-        return self.classifier.classify(interaction_state=interaction_state)
+        return self.classifier.classify(
+            interaction_state=interaction_state,
+            target_object=target_object,
+            interaction=interaction,
+            objects=objects,
+            hands=hands,
+        )
 
     def reset(self) -> None:
         self.classifier.reset_buffer()

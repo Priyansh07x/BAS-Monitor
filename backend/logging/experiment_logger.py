@@ -54,11 +54,13 @@ class ExperimentLogger:
             "status": "IN_PROGRESS",
             "steps_conducted": [],
             "anomalies": [],
+            "recoveries": [],
             "summary": {
                 "total_steps": 0,
                 "valid_steps": 0,
                 "out_of_order_steps": 0,
                 "skipped_steps": 0,
+                "recoveries_triggered": 0,
                 "average_confidence": 0.0
             }
         }
@@ -98,7 +100,9 @@ class ExperimentLogger:
         self,
         anomaly_type: str,  # 'SKIPPED_STEP', 'OUT_OF_ORDER', 'TIMEOUT', 'LOW_CONFIDENCE'
         message: str,
-        step_id: Optional[int] = None
+        step_id: Optional[int] = None,
+        recovery_instruction: Optional[str] = None,
+        recovery_event: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Record an anomaly or procedure deviation."""
         if not self.active_session:
@@ -111,26 +115,63 @@ class ExperimentLogger:
             "step_id": step_id,
             "message": message
         }
+        if recovery_instruction:
+            anomaly["recovery_instruction"] = str(recovery_instruction).strip()
+        if recovery_event:
+            anomaly["recovery_event"] = recovery_event.to_dict() if hasattr(recovery_event, "to_dict") else dict(recovery_event)
         self.active_session["anomalies"].append(anomaly)
         return anomaly
 
+    def log_recovery(
+        self,
+        recovery_event: Any,
+    ) -> Dict[str, Any]:
+        """Record a structured procedural recovery event in the active experiment session."""
+        if not self.active_session:
+            return {}
+
+        now = datetime.now()
+        event_dict = recovery_event.to_dict() if hasattr(recovery_event, "to_dict") else dict(recovery_event)
+
+        rec_entry = {
+            "timestamp": now.isoformat(),
+            "event_type": event_dict.get("event_type", "PROCEDURAL_RECOVERY"),
+            "expected_step": event_dict.get("expected_step"),
+            "expected_step_number": event_dict.get("expected_step_number"),
+            "expected_action": event_dict.get("expected_action"),
+            "expected_object": event_dict.get("expected_object"),
+            "detected_action": event_dict.get("detected_action"),
+            "detected_object": event_dict.get("detected_object"),
+            "detected_step": event_dict.get("detected_step"),
+            "procedural_status": event_dict.get("procedural_status"),
+            "explanation": event_dict.get("explanation"),
+            "recovery_instruction": event_dict.get("recovery_instruction"),
+            "timeout_s": event_dict.get("timeout_s"),
+            "requires_operator_action": event_dict.get("requires_operator_action", True),
+        }
+
+        if "recoveries" not in self.active_session:
+            self.active_session["recoveries"] = []
+        self.active_session["recoveries"].append(rec_entry)
+        self._recalculate_summary()
+        return rec_entry
+
     def _recalculate_summary(self) -> None:
         """Update metrics in the active session."""
-        steps = self.active_session["steps_conducted"]
+        steps = self.active_session.get("steps_conducted", [])
         total = len(steps)
-        if total == 0:
-            return
-
         valid_count = sum(1 for s in steps if s["validation_status"] == "VALID")
         ooo_count = sum(1 for s in steps if s["validation_status"] == "OUT_OF_ORDER")
         skipped_count = sum(1 for s in steps if s["validation_status"] == "SKIPPED")
-        avg_conf = sum(s["confidence"] for s in steps) / total
+        avg_conf = (sum(s["confidence"] for s in steps) / total) if total > 0 else 0.0
+        rec_count = len(self.active_session.get("recoveries", []))
 
         self.active_session["summary"] = {
             "total_steps": total,
             "valid_steps": valid_count,
             "out_of_order_steps": ooo_count,
             "skipped_steps": skipped_count,
+            "recoveries_triggered": rec_count,
             "average_confidence": round(avg_conf, 2)
         }
 

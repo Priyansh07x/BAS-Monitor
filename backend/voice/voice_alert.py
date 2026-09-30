@@ -40,6 +40,11 @@ class VoiceAlertService:
 
         self._init_tts_engine()
 
+        # Debounce tracking for recovery alerts
+        self._debounce_lock = threading.Lock()
+        self._last_recovery_key: Optional[tuple] = None
+        self._last_recovery_time: float = 0.0
+
         # Start background worker thread
         self._worker_thread = threading.Thread(
             target=self._speech_worker, daemon=True, name="VoiceAlertWorker"
@@ -205,6 +210,43 @@ class VoiceAlertService:
             f"Procedure complete. All steps for {experiment_name} have been successfully verified.",
             priority=True
         )
+
+    def alert_recovery_guidance(
+        self,
+        step_id: Any,
+        recovery_text: str,
+        debounce_seconds: float = 3.0,
+        priority: bool = True,
+    ) -> bool:
+        """
+        Audible corrective procedural guidance for astronaut recovery.
+        Debounces repeated identical recovery alerts within debounce_seconds window.
+
+        Returns True if speech was enqueued, False if debounced or disabled.
+        """
+        if not self.enabled or not recovery_text or not str(recovery_text).strip():
+            return False
+
+        clean_text = str(recovery_text).strip()
+        norm_step = str(step_id).strip() if step_id is not None else ""
+        key = (norm_step, clean_text)
+        now = time.monotonic()
+
+        with self._debounce_lock:
+            if self._last_recovery_key == key and (now - self._last_recovery_time) < debounce_seconds:
+                return False
+            self._last_recovery_key = key
+            self._last_recovery_time = now
+
+        spoken_text = f"Recovery guidance for Step {norm_step}. {clean_text}" if norm_step else clean_text
+        self.speak(spoken_text, priority=priority)
+        return True
+
+    def reset_debounce(self) -> None:
+        """Reset the debounce cache for recovery alerts."""
+        with self._debounce_lock:
+            self._last_recovery_key = None
+            self._last_recovery_time = 0.0
 
     def shutdown(self) -> None:
         """Gracefully stop the worker thread."""

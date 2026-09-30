@@ -1,0 +1,395 @@
+{
+  "schema_version": "1.0.0",
+  "experiment_id": "EXP-001",
+  "experiment_version": "1.0.0",
+  "experiment_name": "Microgravity Sample Transfer and Containment Procedure",
+  "generated_by": "Gate B3 — Dataset Planning / Collection Protocol",
+  "date": "2026-09-23",
+
+  "canonical_actions": [
+    {
+      "action_id": "PICK_RED",
+      "step_id": "S1",
+      "step_number": 1,
+      "target_object": "RED_SAMPLE",
+      "description": "Grasp and lift the red specimen from the holding tray",
+      "onset_evidence": "Hand approaches and contacts RED_SAMPLE bounding box region",
+      "completion_evidence": "RED_SAMPLE displaced upward from tray; hand-object IoU sustained for >= 8 frames",
+      "timeout_s": 30
+    },
+    {
+      "action_id": "PLACE_RED",
+      "step_id": "S2",
+      "step_number": 2,
+      "target_object": "RED_SAMPLE",
+      "description": "Transfer and deposit the red specimen into the sample container",
+      "onset_evidence": "Hand carries RED_SAMPLE toward SAMPLE_CONTAINER region",
+      "completion_evidence": "RED_SAMPLE overlap with SAMPLE_CONTAINER aperture; hand retracts without RED_SAMPLE",
+      "timeout_s": 30
+    },
+    {
+      "action_id": "PICK_BLUE",
+      "step_id": "S3",
+      "step_number": 3,
+      "target_object": "BLUE_SAMPLE",
+      "description": "Grasp and lift the blue specimen from the holding tray",
+      "onset_evidence": "Hand approaches and contacts BLUE_SAMPLE bounding box region",
+      "completion_evidence": "BLUE_SAMPLE displaced upward from tray; hand-object IoU sustained for >= 8 frames",
+      "timeout_s": 30
+    },
+    {
+      "action_id": "PLACE_BLUE",
+      "step_id": "S4",
+      "step_number": 4,
+      "target_object": "BLUE_SAMPLE",
+      "description": "Transfer and deposit the blue specimen into the sample container",
+      "onset_evidence": "Hand carries BLUE_SAMPLE toward SAMPLE_CONTAINER region",
+      "completion_evidence": "BLUE_SAMPLE overlap with SAMPLE_CONTAINER aperture; hand retracts without BLUE_SAMPLE",
+      "timeout_s": 30
+    },
+    {
+      "action_id": "CLOSE_LID",
+      "step_id": "S5",
+      "step_number": 5,
+      "target_object": "CONTAINER_LID",
+      "description": "Align, rotate, and latch the container lid",
+      "onset_evidence": "Hand contacts CONTAINER_LID boundary region",
+      "completion_evidence": "CONTAINER_LID in closed spatial position; hand retracts from lid area",
+      "timeout_s": 25
+    }
+  ],
+
+  "canonical_objects": [
+    {
+      "object_id": "RED_SAMPLE",
+      "category": "Manipulated Object",
+      "actions": ["PICK_RED", "PLACE_RED"],
+      "visual_properties": "UNSPECIFIED — requires experimental calibration",
+      "dimensions": "UNSPECIFIED — requires experimental calibration"
+    },
+    {
+      "object_id": "BLUE_SAMPLE",
+      "category": "Manipulated Object",
+      "actions": ["PICK_BLUE", "PLACE_BLUE"],
+      "visual_properties": "UNSPECIFIED — requires experimental calibration",
+      "dimensions": "UNSPECIFIED — requires experimental calibration"
+    },
+    {
+      "object_id": "SAMPLE_CONTAINER",
+      "category": "Destination / Container",
+      "actions": ["PLACE_RED", "PLACE_BLUE"],
+      "visual_properties": "UNSPECIFIED — requires experimental calibration",
+      "dimensions": "UNSPECIFIED — requires experimental calibration"
+    },
+    {
+      "object_id": "CONTAINER_LID",
+      "category": "Control / Sealing Mechanism",
+      "actions": ["CLOSE_LID"],
+      "visual_properties": "UNSPECIFIED — requires experimental calibration",
+      "dimensions": "UNSPECIFIED — requires experimental calibration"
+    }
+  ],
+
+  "completion_states": ["COMPLETE", "INCOMPLETE", "FAILURE"],
+
+  "procedure_correctness_values": ["CORRECT", "INCORRECT"],
+
+  "failure_categories": [
+    {
+      "category_tag": "FAILURE_WRONG_ACTION",
+      "level": "PROCEDURE",
+      "description": "Wrong action performed at the current procedure step"
+    },
+    {
+      "category_tag": "FAILURE_SKIPPED_STEP",
+      "level": "PROCEDURE",
+      "description": "A procedure step is entirely omitted before progressing"
+    },
+    {
+      "category_tag": "FAILURE_OUT_OF_ORDER",
+      "level": "PROCEDURE",
+      "description": "A previous procedure step is repeated after the current step has begun"
+    },
+    {
+      "category_tag": "FAILURE_REPEATED_STEP",
+      "level": "PROCEDURE",
+      "description": "The same step is performed twice consecutively"
+    },
+    {
+      "category_tag": "FAILURE_PREMATURE",
+      "level": "PROCEDURE",
+      "description": "An action is performed before its preconditions are met"
+    },
+    {
+      "category_tag": "FAILURE_TIMEOUT",
+      "level": "PROCEDURE",
+      "description": "A step is initiated but not completed within its timeout window"
+    },
+    {
+      "category_tag": "FAILURE_WRONG_OBJECT",
+      "level": "PROCEDURE",
+      "description": "Correct action motion form but directed at incorrect object"
+    },
+    {
+      "category_tag": "INCOMPLETE_APPROACH",
+      "level": "AI_RECOGNITION",
+      "description": "Hand approaches target object but does not make contact"
+    },
+    {
+      "category_tag": "INCOMPLETE_PICKUP",
+      "level": "AI_RECOGNITION",
+      "description": "Object grasped but not fully lifted from rack"
+    },
+    {
+      "category_tag": "INCOMPLETE_PLACE",
+      "level": "AI_RECOGNITION",
+      "description": "Object carried to container but not released; hand retracts with object"
+    },
+    {
+      "category_tag": "INCOMPLETE_LID",
+      "level": "AI_RECOGNITION",
+      "description": "Lid contacted but not fully closed or latched"
+    },
+    {
+      "category_tag": "INCOMPLETE_ABORT",
+      "level": "AI_RECOGNITION",
+      "description": "Action started then abandoned mid-motion"
+    },
+    {
+      "category_tag": "AI_WRONG_ACTION",
+      "level": "AI_RECOGNITION",
+      "description": "Model likely to misclassify the action (visually ambiguous clip)"
+    },
+    {
+      "category_tag": "AI_MISSED_ACTION",
+      "level": "AI_RECOGNITION",
+      "description": "Action occurs but model may output IDLE or wrong class"
+    },
+    {
+      "category_tag": "AI_LOW_CONFIDENCE",
+      "level": "AI_RECOGNITION",
+      "description": "Action is visually ambiguous; model expected to produce low confidence output"
+    },
+    {
+      "category_tag": "AI_OCCLUSION",
+      "level": "AI_RECOGNITION",
+      "description": "Object or hand occluded during critical action phase"
+    },
+    {
+      "category_tag": "AI_LIGHTING",
+      "level": "AI_RECOGNITION",
+      "description": "Poor lighting degrades visual signal"
+    },
+    {
+      "category_tag": "AI_BLUR",
+      "level": "AI_RECOGNITION",
+      "description": "Fast motion produces blurred frames"
+    },
+    {
+      "category_tag": "AI_FAST_MOTION",
+      "level": "AI_RECOGNITION",
+      "description": "Action performed much faster than typical training distribution"
+    },
+    {
+      "category_tag": "AI_MULTI_OBJECT",
+      "level": "AI_RECOGNITION",
+      "description": "Both RED_SAMPLE and BLUE_SAMPLE visible simultaneously; potential confusion"
+    }
+  ],
+
+  "orientation_categories": [
+    {
+      "orientation_category": "NORMAL",
+      "degrees": [0],
+      "description": "Standard upright camera orientation"
+    },
+    {
+      "orientation_category": "MODERATE_ROTATION",
+      "degrees": [45, 135, 225],
+      "description": "Diagonal camera / scene rotation"
+    },
+    {
+      "orientation_category": "EXTREME_ROTATION",
+      "degrees": [90, 180, 270],
+      "description": "Sideways, inverted, or opposite orientation"
+    }
+  ],
+
+  "variation_dimensions": {
+    "hand": ["LEFT", "RIGHT", "BOTH"],
+    "speed_category": ["SLOW", "NORMAL", "FAST"],
+    "viewpoint": ["FRONT", "SIDE", "OVERHEAD", "OBLIQUE"],
+    "lighting": ["STANDARD", "BRIGHT", "DIM", "SHADOW"],
+    "occlusion": ["NONE", "PARTIAL", "FULL"],
+    "orientation_deg": [0, 45, 90, 135, 180, 225, 270]
+  },
+
+  "split_definitions": {
+    "strategy": "subject_level",
+    "strategy_note": "All clips from a given subject_id are assigned to exactly one split. No random frame-level or clip-level splitting. No same-person clips across splits.",
+    "splits": [
+      {
+        "split_id": "TRAIN",
+        "subject_fraction": 0.70,
+        "purpose": "Model training"
+      },
+      {
+        "split_id": "VALIDATION",
+        "subject_fraction": 0.15,
+        "purpose": "Hyperparameter tuning and early stopping"
+      },
+      {
+        "split_id": "TEST",
+        "subject_fraction": 0.15,
+        "purpose": "Final held-out evaluation — must not be used during training decisions"
+      }
+    ],
+    "evaluation_subsets": [
+      {
+        "subset_id": "EVAL_NORMAL",
+        "description": "Standard orientation (0 deg), normal lighting, no occlusion",
+        "filter_conditions": {
+          "orientation_deg": [0],
+          "lighting": ["STANDARD"],
+          "occlusion": ["NONE"]
+        }
+      },
+      {
+        "subset_id": "EVAL_ORIENTATION",
+        "description": "Non-zero orientation angles",
+        "filter_conditions": {
+          "orientation_deg": [45, 90, 135, 180, 225, 270, 315]
+        }
+      },
+      {
+        "subset_id": "EVAL_OCCLUSION",
+        "description": "Clips with partial or full occlusion",
+        "filter_conditions": {
+          "occlusion": ["PARTIAL", "FULL"]
+        }
+      },
+      {
+        "subset_id": "EVAL_LIGHTING",
+        "description": "Non-standard lighting conditions",
+        "filter_conditions": {
+          "lighting": ["BRIGHT", "DIM", "SHADOW"]
+        }
+      },
+      {
+        "subset_id": "EVAL_VIEWPOINT",
+        "description": "Non-front viewpoints",
+        "filter_conditions": {
+          "viewpoint": ["SIDE", "OVERHEAD", "OBLIQUE"]
+        }
+      },
+      {
+        "subset_id": "EVAL_FAILURE",
+        "description": "Procedural failure examples",
+        "filter_conditions": {
+          "completion_state": ["FAILURE"]
+        }
+      },
+      {
+        "subset_id": "EVAL_INCOMPLETE",
+        "description": "Incomplete action examples",
+        "filter_conditions": {
+          "completion_state": ["INCOMPLETE"]
+        }
+      }
+    ]
+  },
+
+  "metadata_fields": [
+    {"field": "sample_id", "type": "string", "required": true, "description": "Unique deterministic sample identifier"},
+    {"field": "subject_id", "type": "string", "required": true, "description": "Anonymized subject identifier"},
+    {"field": "session_id", "type": "string", "required": true, "description": "Session identifier within a subject"},
+    {"field": "take_id", "type": "integer", "required": true, "description": "Take number within a session (1-indexed)"},
+    {"field": "source_video", "type": "string", "required": true, "description": "Relative path from data/dataset/raw/"},
+    {"field": "clip_start", "type": "float", "required": true, "description": "Start time in seconds from video start"},
+    {"field": "clip_end", "type": "float", "required": true, "description": "End time in seconds from video start, or null"},
+    {"field": "procedure_id", "type": "string", "required": true, "allowed_values": ["EXP-001"], "description": "Canonical experiment ID"},
+    {"field": "procedure_version", "type": "string", "required": true, "allowed_values": ["1.0.0"], "description": "Experiment version"},
+    {"field": "step_id", "type": "string", "required": true, "allowed_values": ["S1", "S2", "S3", "S4", "S5", null], "description": "Procedure step ID"},
+    {"field": "action", "type": "string", "required": true, "allowed_values": ["PICK_RED", "PLACE_RED", "PICK_BLUE", "PLACE_BLUE", "CLOSE_LID", "NONE"], "description": "Canonical action label"},
+    {"field": "object", "type": "string", "required": true, "allowed_values": ["RED_SAMPLE", "BLUE_SAMPLE", "SAMPLE_CONTAINER", "CONTAINER_LID", "NONE"], "description": "Canonical object label"},
+    {"field": "hand", "type": "string", "required": true, "allowed_values": ["LEFT", "RIGHT", "BOTH"], "description": "Hand used"},
+    {"field": "speed_category", "type": "string", "required": true, "allowed_values": ["SLOW", "NORMAL", "FAST"], "description": "Execution speed category"},
+    {"field": "viewpoint", "type": "string", "required": true, "allowed_values": ["FRONT", "SIDE", "OVERHEAD", "OBLIQUE"], "description": "Camera viewpoint category"},
+    {"field": "orientation_deg", "type": "integer", "required": true, "allowed_values": [0, 45, 90, 135, 180, 225, 270], "description": "Camera/scene rotation in degrees"},
+    {"field": "orientation_category", "type": "string", "required": true, "allowed_values": ["NORMAL", "MODERATE_ROTATION", "EXTREME_ROTATION"], "description": "Derived orientation category"},
+    {"field": "lighting", "type": "string", "required": true, "allowed_values": ["STANDARD", "BRIGHT", "DIM", "SHADOW"], "description": "Lighting condition"},
+    {"field": "occlusion", "type": "string", "required": true, "allowed_values": ["NONE", "PARTIAL", "FULL"], "description": "Occlusion level"},
+    {"field": "completion_state", "type": "string", "required": true, "allowed_values": ["COMPLETE", "INCOMPLETE", "FAILURE"], "description": "Action completion state"},
+    {"field": "procedure_correctness", "type": "string", "required": true, "allowed_values": ["CORRECT", "INCORRECT"], "description": "Whether action is correct at this procedure point"},
+    {"field": "failure_type", "type": "string", "required": false, "description": "Category tag from failure taxonomy, or null"},
+    {"field": "split", "type": "string", "required": true, "allowed_values": ["TRAIN", "VALIDATION", "TEST"], "description": "Dataset split assignment"},
+    {"field": "notes", "type": "string", "required": false, "description": "Free text for unusual conditions"}
+  ],
+
+  "collection_targets": {
+    "status": "NOT_COLLECTED",
+    "status_note": "No EXP-001 specific clips have been collected. All numbers below are PROPOSED TARGETS requiring experimental validation.",
+    "subject_count_baseline": 5,
+    "subject_count_stretch": 10,
+    "sessions_per_subject_baseline": 2,
+    "sessions_per_subject_stretch": 4,
+    "takes_per_action_per_session_baseline": 3,
+    "takes_per_action_per_session_stretch": 5,
+    "positive_clips_baseline": 150,
+    "positive_clips_stretch": 300,
+    "incomplete_clips_baseline": 50,
+    "incomplete_clips_stretch": 100,
+    "failure_clips_baseline": 70,
+    "failure_clips_stretch": 140
+  },
+
+  "clip_temporal_requirements": {
+    "minimum_frames": 8,
+    "minimum_duration_s": 0.5,
+    "maximum_duration_s": 35,
+    "note": "PROPOSED TARGETS — require validation during collection"
+  },
+
+  "dataset_sources": {
+    "current_baseline_dataset": {
+      "name": "HMDB51",
+      "location": "training/data/raw/hmdb51_sta/",
+      "classes": 51,
+      "status": "IN_USE_IN_PART_1",
+      "status_note": "HMDB51 is the active Part-1 dataset source. Used for training the current binary baseline model and may support incremental class expansion in later SIH development stages.",
+      "current_model_classes": ["catch", "not-catch"],
+      "relevant_classes_for_manipulation": ["catch", "pick", "pour", "throw"],
+      "mapping_to_procedure_actions": "NONE",
+      "mapping_note": "HMDB51 generic classes are not equivalent to EXP-001 procedure labels. catch != PICK_RED. pick != PICK_BLUE. No mapping must be created without explicit future model/data design justification."
+    },
+    "procedure_specific_dataset": {
+      "name": "EXP-001 Procedure Dataset",
+      "status": "NOT_COLLECTED",
+      "status_note": "No EXP-001-specific labeled clips have been collected. This is a future collection requirement for direct 5-action procedure recognition. Collection protocol is defined in docs/workstream-b-dataset-protocol.md.",
+      "future_procedure_specific_labels": ["PICK_RED", "PLACE_RED", "PICK_BLUE", "PLACE_BLUE", "CLOSE_LID"],
+      "future_procedure_specific_objects": ["RED_SAMPLE", "BLUE_SAMPLE", "SAMPLE_CONTAINER", "CONTAINER_LID"]
+    },
+    "future_datasets": {
+      "status": "NOT_PLANNED_YET",
+      "status_note": "Additional external or custom datasets (e.g., for microgravity robustness, object-specific recognition) may be introduced when the SIH project reaches the corresponding development stage. No specific datasets have been formally selected."
+    }
+  },
+
+  "existing_training_data": {
+    "hmdb51": {
+      "location": "training/data/raw/hmdb51_sta/",
+      "classes": 51,
+      "part1_baseline_status": "IN_USE_IN_PART_1",
+      "procedure_specific_label_status": "NOT_PRESENT",
+      "note": "HMDB51 is the current Part-1 baseline dataset source (IN_USE). It does not contain EXP-001 procedure-specific labels (PICK_RED, PLACE_RED, PICK_BLUE, PLACE_BLUE, CLOSE_LID). Both facts are true simultaneously. Must not be co-mingled with future EXP-001 specific dataset."
+    }
+  },
+
+  "current_part1_model": {
+    "classes": ["catch", "not-catch"],
+    "training_dataset": "HMDB51",
+    "integration_status": "NOT_INTEGRATED",
+    "integration_note": "Exported Part-1 binary model is not integrated into Part 2. Model is under active revision in Colab. No synthetic mappings from catch/not-catch to procedure actions exist.",
+    "model_file_location": null
+  }
+}
