@@ -60,11 +60,7 @@ BAS-Monitor/                          ← PROJECT_ROOT (repo root)
                     └──────────────┬──────────────────────┘
                                    │
                     ┌──────────────▼──────────────────────┐
-                    │ QMainWindow() — 1600×900            │
-                    └──────────────┬──────────────────────┘
-                                   │
-                    ┌──────────────▼──────────────────────┐
-                    │ QWebEngineView + CustomWebEnginePage │
+                    │ QMainWindow() — Status Display      │
                     └──────────────┬──────────────────────┘
                                    │
                     ┌──────────────▼──────────────────────┐
@@ -72,24 +68,18 @@ BAS-Monitor/                          ← PROJECT_ROOT (repo root)
                     └──────────────┬──────────────────────┘
                                    │
                     ┌──────────────▼──────────────────────┐
-                    │ QWebChannel(page)                    │
-                    └──────────────┬──────────────────────┘
-                                   │
-                    ┌──────────────▼──────────────────────┐
                     │ Bridge(app_state) instantiated       │
                     └──────────────┬──────────────────────┘
                                    │
                     ┌──────────────▼──────────────────────┐
-                    │ channel.registerObject('backend',    │
-                    │                        bridge)       │
+                    │ GUIServer(bridge, FRONTEND_DIR)      │
+                    │ → HTTP Server (8000)                 │
+                    │ → QWebSocketServer (8001)            │
                     └──────────────┬──────────────────────┘
                                    │
                     ┌──────────────▼──────────────────────┐
-                    │ page.setWebChannel(channel)          │
-                    └──────────────┬──────────────────────┘
-                                   │
-                    ┌──────────────▼──────────────────────┐
-                    │ browser.load(frontend/index.html)    │
+                    │ WebRTCServer(port=8555)              │
+                    │ → aiohttp (sdp offer/answer)         │
                     └──────────────┬──────────────────────┘
                                    │
                     ┌──────────────▼──────────────────────┐
@@ -97,7 +87,7 @@ BAS-Monitor/                          ← PROJECT_ROOT (repo root)
                     └──────────────┬──────────────────────┘
                                    │
                     ┌──────────────▼──────────────────────┐
-                    │ aboutToQuit → bridge.shutdown        │
+                    │ aboutToQuit → cleanup()              │
                     └──────────────┬──────────────────────┘
                                    │
                     ┌──────────────▼──────────────────────┐
@@ -112,14 +102,13 @@ BAS-Monitor/                          ← PROJECT_ROOT (repo root)
 | 1 | `main.py:87` | `if __name__ == "__main__"` | Entry gate |
 | 2 | `main.py:12-15` | `BASE_DIR / PROJECT_ROOT` | Computes paths, inserts repo root into `sys.path` |
 | 3 | `main.py:53` | `QApplication(sys.argv)` | Creates Qt application |
-| 4 | `main.py:58-59` | `QMainWindow()` | Creates 1600×900 window |
-| 5 | `main.py:63-65` | `QWebEngineView + CustomWebEnginePage` | Browser widget with auto-permission grants |
-| 6 | `main.py:68` | `AppState()` | → `app_state.py:10` — creates Camera(), sets IDLE state |
-| 7 | `main.py:70-71` | `QWebChannel + Bridge(app_state)` | → `bridge.py:35` — inits recorder, streamer, voice singletons |
-| 8 | `main.py:73-74` | `registerObject("backend", bridge)` | Makes bridge callable as `window.backend` in JS |
-| 9 | `main.py:76` | `browser.load(index.html)` | Loads the frontend HTML |
-| 10 | `main.py:82` | `aboutToQuit.connect(shutdown)` | Registers cleanup handler |
-| 11 | `main.py:84` | `app.exec()` | Starts Qt event loop (blocks here) |
+| 4 | `main.py:58-65` | `QMainWindow()` | Creates status window showing LAN IP |
+| 5 | `main.py:68` | `AppState()` | → `app_state.py:10` — creates Camera(), sets IDLE state |
+| 6 | `main.py:69` | `Bridge(app_state)` | → `bridge.py:35` — inits recorder, streamer, voice singletons |
+| 7 | `main.py:72` | `GUIServer()` | Starts HTTP (8000) for GUI & WebSocket (8001) for QWebChannel |
+| 8 | `main.py:75-77` | `WebRTCServer()` | Starts `aiortc` + `aiohttp` signaling server (8555) |
+| 9 | `main.py:82` | `aboutToQuit.connect(cleanup)` | Registers cleanup handler for servers and bridge |
+| 10 | `main.py:85` | `app.exec()` | Starts Qt event loop (blocks here) |
 
 ---
 
@@ -345,10 +334,10 @@ JS: deleteExperiment(experimentId)                [app.js:521]
          │                  │── update_frame ──►│                   │                 │
          │                  │                   │── resize(854x480)►│                 │
          │                  │                   │                   │                 │
-         │                  │                   │                   │◄── GET /stream ─│
+         │                  │                   │                   │◄── POST /offer ─│
          │                  │                   │◄── get_latest ───│                 │
          │                  │                   │── frame.copy() ──►│                 │
-         │                  │                   │                   │── MJPEG ───────►│
+         │                  │                   │                   │── WebRTC RTP ──►│
          │                  │                   │                   │                 │
          │── stopStream ───►│                   │                   │                 │
          │                  │── stop() ────────►│                   │                 │
@@ -360,9 +349,9 @@ JS: deleteExperiment(experimentId)                [app.js:521]
 | Step | Location | Function |
 |------|----------|----------|
 | Start | `bridge.py:230` | `Bridge.startStreaming()` |
-| Server | `streamer.py:112` | `IPStreamer.start()` |
+| Server | `webrtc_server.py:68` | `WebRTCServer.start()` |
 | Frame Update | `streamer.py:96` | `IPStreamer.update_frame()` |
-| HTTP Handler | `streamer.py:19` | `MJPEGStreamHandler.do_GET()` |
+| WebRTC Handler| `webrtc_server.py:40` | `offer(request) -> RTCPeerConnection` |
 | Stop | `streamer.py:124` | `IPStreamer.stop()` |
 
 ---
@@ -528,8 +517,8 @@ app.aboutToQuit signal
 | Main Thread | `MainThread` | Qt Event Loop | GUI rendering, QWebChannel IPC, QTimer callbacks |
 | Voice Worker | `VoiceAlertWorker` | VoiceAlertService | Pulls speech from queue, dispatches to TTS engine |
 | Video Writer | `VideoRecorderWorker` | VideoRecorder | Pops frames from queue, writes to MP4 (only while recording) |
-| HTTP Server | daemon thread | IPStreamer | Serves MJPEG stream (only while streaming) |
-| HTTP Handler(s) | per-client threads | ThreadedHTTPServer | One thread per connected stream viewer |
+| HTTP Server | daemon thread | GUIServer | Serves GUI over LAN port 8000 |
+| WebRTC Server | daemon thread | WebRTCServer | Runs `aiohttp` event loop for signaling and RTP transport |
 
 ---
 
@@ -548,16 +537,16 @@ app.aboutToQuit signal
     └──┬─────┬──────┬──┘
        │     │      │
        ▼     │      ▼
-  ┌────────┐ │  ┌──────────┐
-  │imencode│ │  │IPStreamer │
-  │→base64 │ │  │→ MJPEG   │
-  └───┬────┘ │  └────┬─────┘
-      │      │       │
-      ▼      │       ▼
-  ┌────────┐ │  ┌──────────────┐
-  │ JS UI  │ │  │HTTP /stream  │
-  │img.src │ │  │(ext clients) │
-  └────────┘ │  └──────────────┘
+  ┌───────────┐ │  ┌──────────────┐
+  │WebRTC Track│ │  │ GUIServer    │
+  │→ aiortc    │ │  │→ HTTP 8000   │
+  └────┬──────┘ │  └──────┬───────┘
+       │        │         │
+       ▼        │         ▼
+  ┌───────────┐ │  ┌──────────────┐
+  │ JS UI     │ │  │HTTP 8000     │
+  │video.src  │ │  │(ext clients) │
+  └───────────┘ │  └──────────────┘
              │
              ▼
      ┌──────────────┐
@@ -682,3 +671,4 @@ The real-time edge processing graph operates across visual perception, spatial g
 | 2026-09-16 | Added `procedure_manager.py` (step loading/indexing), `sequence_validator.py` (FSM sequence verification engine), and `interaction_logic.py` (hand-object proximity/IoU) | backend/experiment/procedure_manager.py, backend/experiment/sequence_validator.py, backend/experiment/interaction_logic.py |
 | 2026-09-16 | Added full AI Perception suite (`object_detector.py`, `pose_detector.py`, `hand_detector.py`, `action_classifier.py`, `action_recognizer.py`, `hailo_inference.py`, `inference_pipeline.py`) | backend/ai/* |
 | 2026-09-16 | Verified complete test suite: 18/18 tests passing in `test_functionalities.py`, 10/10 passing in `BAS-Monitor/tests` | test_functionalities.py, tests |
+| 2026-09-30 | Migrated GUI to LAN HTTP Server and upgraded MJPEG stream to WebRTC/UDP | main.py, frontend/assets/js/app.js, backend/network/gui_server.py, backend/network/webrtc_server.py |

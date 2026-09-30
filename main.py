@@ -12,40 +12,13 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from PySide6.QtCore import QUrl
-from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWidgets import QApplication, QMainWindow
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWebEngineCore import QWebEnginePage
-
 from backend.bridge import Bridge
 from backend.app_state import AppState
-
+from backend.network.gui_server import GUIServer
 
 INDEX_FILE = PROJECT_ROOT / "frontend" / "index.html"
-
-
-class CustomWebEnginePage(QWebEnginePage):
-    """Auto-grants camera/microphone permissions for the local frontend."""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.featurePermissionRequested.connect(self._on_permission)
-
-    def _on_permission(self, url, feature):
-        if feature in (
-            QWebEnginePage.Feature.MediaAudioCapture,
-            QWebEnginePage.Feature.MediaVideoCapture,
-            QWebEnginePage.Feature.MediaAudioVideoCapture,
-        ):
-            self.setFeaturePermission(
-                url, feature, QWebEnginePage.PermissionPolicy.PermissionGrantedByUser
-            )
-        else:
-            self.setFeaturePermission(
-                url, feature, QWebEnginePage.PermissionPolicy.PermissionDeniedByUser
-            )
-
+FRONTEND_DIR = PROJECT_ROOT / "frontend"
 
 def main() -> int:
     app = QApplication(sys.argv)
@@ -53,31 +26,44 @@ def main() -> int:
     if not INDEX_FILE.exists():
         raise FileNotFoundError(f"Frontend file not found: {INDEX_FILE}")
 
+    # Main window just shows instructions
     window = QMainWindow()
-    window.setWindowTitle("BAS Experiment Monitor")
-    window.resize(1600, 900)
+    window.setWindowTitle("BAS Experiment Monitor (Edge Node)")
+    window.resize(600, 200)
+    
+    from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
+    from PySide6.QtCore import Qt
+    
+    label = QLabel("Edge Server Running.\nConnect via LAN: http://<EDGE_LAN_IP>:8000\nor locally at http://localhost:8000")
+    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    font = label.font()
+    font.setPointSize(16)
+    label.setFont(font)
+    
+    central_widget = QWidget()
+    layout = QVBoxLayout(central_widget)
+    layout.addWidget(label)
+    window.setCentralWidget(central_widget)
 
-    # --- Browser + Custom Page (grants camera permissions) ---
-    browser = QWebEngineView()
-    page = CustomWebEnginePage(browser)
-    browser.setPage(page)
-
-    # --- QWebChannel: expose Python backend to JS ---
     app_state = AppState()
-
-    channel = QWebChannel(page)
     bridge = Bridge(app_state)
+    
+    # Start the LAN HTTP + WebSocket server
+    gui_server = GUIServer(bridge, FRONTEND_DIR, http_port=8000, ws_port=8001)
 
-    channel.registerObject("backend", bridge)
-    page.setWebChannel(channel)
+    # Start the WebRTC signaling server (Phase A8-10 Resilient Streaming)
+    from backend.network.webrtc_server import WebRTCServer
+    webrtc_server = WebRTCServer(port=8555)
+    webrtc_server.start()
 
-    browser.load(QUrl.fromLocalFile(str(INDEX_FILE)))
-
-    window.setCentralWidget(browser)
     window.show()
 
     # Clean up on exit
-    app.aboutToQuit.connect(bridge.shutdown)
+    def cleanup():
+        bridge.shutdown()
+        gui_server.shutdown()
+        
+    app.aboutToQuit.connect(cleanup)
 
     return app.exec()
 

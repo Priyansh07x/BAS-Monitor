@@ -8,90 +8,135 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Python Backend Connection ---
     let backend = null;
 
-new QWebChannel(qt.webChannelTransport, function(channel) {
-    backend = channel.objects.backend;
+const wsUrl = `ws://${window.location.hostname || 'localhost'}:8001`;
+const ws = new WebSocket(wsUrl);
+console.log("Connecting to WebSocket:", wsUrl);
 
-    console.log("Python backend connected successfully.");
+ws.onopen = function() {
+    new QWebChannel(ws, function(channel) {
+        backend = channel.objects.backend;
 
-    // Send Initial UI startup Logs to backend
-    log("BAS Experiment Monitor initializing...", "SYS");
-    log("Edge HAR Neural Network Model loaded (YOLOv8 + SlowFast).", "SYS");
-    log("Sequence Engine active. Predefined Experiment: EXP-01 Loaded.", "SYS");
-    log("System Ready. Waiting for camera input or video source.", "SYS");
+        console.log("Python backend connected successfully via WebSocket.");
 
-    if (backend.logMessage) {
-        backend.logMessage.connect(function(msg, type) {
-            log(msg, type, true); // true = fromBackend
+        // Send Initial UI startup Logs to backend
+        log("BAS Experiment Monitor initializing...", "SYS");
+        log("Edge HAR Neural Network Model loaded (YOLOv8 + SlowFast).", "SYS");
+        log("Sequence Engine active. Predefined Experiment: EXP-01 Loaded.", "SYS");
+        log("System Ready. Waiting for camera input or video source.", "SYS");
+
+        if (backend.logMessage) {
+            backend.logMessage.connect(function(msg, type) {
+                log(msg, type, true); // true = fromBackend
+            });
+        }
+
+        if (backend.recTimerTick) {
+            backend.recTimerTick.connect(function(timeStr) {
+                window.basOnRecTimerTick(timeStr);
+            });
+        }
+
+        loadExperiments();
+
+        backend.startCamera(function(success) {
+            console.log("Python camera started:", success);
+
+            if (success) {
+                state.inputSource = 'camera';
+
+                if (elements.videoElement) {
+                    elements.videoElement.classList.remove('hidden');
+                }
+
+                if (elements.videoPlaceholder) {
+                    elements.videoPlaceholder.classList.add('hidden');
+                }
+
+                if (elements.videoSourceText) {
+                    elements.videoSourceText.textContent =
+                        "Source: Python/OpenCV Camera";
+                }
+
+                if (elements.outputActiveFilename) {
+                    elements.outputActiveFilename.textContent =
+                        "Source: Python/OpenCV Camera";
+                }
+
+                updateStatusUI();
+                startPythonCameraFeed();
+            } else {
+                console.error("Python camera could not be started.");
+            }
         });
+    });
+};
+ws.onerror = function(err) {
+    console.error("WebSocket Error:", err);
+};
+ws.onclose = function() {
+    console.warn("WebSocket closed.");
+};
+function startPythonCameraFeed() {
+    console.log("Starting Python camera feed via WebRTC...");
+
+    if (elements.pythonCameraFeed) elements.pythonCameraFeed.classList.add('hidden');
+    if (elements.videoPlaceholder) elements.videoPlaceholder.classList.add('hidden');
+    if (elements.videoElement) {
+        elements.videoElement.classList.remove('hidden');
     }
 
-    if (backend.recTimerTick) {
-        backend.recTimerTick.connect(function(timeStr) {
-            window.basOnRecTimerTick(timeStr);
-        });
-    }
+    var pc = new RTCPeerConnection();
 
-    loadExperiments();
-
-    backend.startCamera(function(success) {
-        console.log("Python camera started:", success);
-
-        if (success) {
-            state.inputSource = 'camera';
-
-            if (elements.videoElement) {
-                elements.videoElement.classList.remove('hidden');
-            }
-
-            if (elements.videoPlaceholder) {
-                elements.videoPlaceholder.classList.add('hidden');
-            }
-
-            if (elements.videoSourceText) {
-                elements.videoSourceText.textContent =
-                    "Source: Python/OpenCV Camera";
-            }
-
-            if (elements.outputActiveFilename) {
-                elements.outputActiveFilename.textContent =
-                    "Source: Python/OpenCV Camera";
-            }
-
-            updateStatusUI();
-            startPythonCameraFeed();
-        } else {
-            console.error("Python camera could not be started.");
+    pc.addEventListener('track', function(evt) {
+        if (evt.track.kind == 'video') {
+            console.log("WebRTC video track received");
+            elements.videoElement.srcObject = evt.streams[0];
+            elements.videoElement.play();
         }
     });
-});
-function startPythonCameraFeed() {
-    console.log("Starting Python camera feed...");
 
-    setInterval(() => {
-        if (!backend) return;
+    pc.addTransceiver('video', {direction: 'recvonly'});
 
-        backend.getCameraFrame(function(base64Frame) {
-            if (!base64Frame) return;
-
-            if (elements.pythonCameraFeed) {
-                elements.pythonCameraFeed.src =
-                    "data:image/jpeg;base64," + base64Frame;
-
-                elements.pythonCameraFeed.classList.remove('hidden');
+    pc.createOffer().then(function(offer) {
+        return pc.setLocalDescription(offer);
+    }).then(function() {
+        return new Promise(function(resolve) {
+            if (pc.iceGatheringState === 'complete') {
+                resolve();
+            } else {
+                function checkState() {
+                    if (pc.iceGatheringState === 'complete') {
+                        pc.removeEventListener('icegatheringstatechange', checkState);
+                        resolve();
+                    }
+                }
+                pc.addEventListener('icegatheringstatechange', checkState);
+                setTimeout(resolve, 500); // Fallback timeout for local networks
             }
-
-            if (elements.videoElement) {
-                elements.videoElement.classList.add('hidden');
-            }
-
-            if (elements.videoPlaceholder) {
-                elements.videoPlaceholder.classList.add('hidden');
-            }
-
-            state.inputSource = 'camera';
-            updateStatusUI();
         });
-    }, 100);
+    }).then(function() {
+        var offer = pc.localDescription;
+        const wsHost = window.location.hostname || 'localhost';
+        return fetch(`http://${wsHost}:8555/offer`, {
+            body: JSON.stringify({
+                sdp: offer.sdp,
+                type: offer.type
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            method: 'POST'
+        });
+    }).then(function(response) {
+        return response.json();
+    }).then(function(answer) {
+        return pc.setRemoteDescription(answer);
+    }).catch(function(e) {
+        console.error("WebRTC Connection Error:", e);
+    });
+
+    state.inputSource = 'camera';
+    updateStatusUI();
 }
 
 
