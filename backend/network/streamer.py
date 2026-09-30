@@ -2,7 +2,10 @@ import threading
 import time
 import socket
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 import numpy as np
 from socketserver import ThreadingMixIn
 

@@ -1,0 +1,167 @@
+{
+  "gate": "B5.2",
+  "timestamp": "2026-09-30T05:36:43.613913",
+  "seed": 42,
+  "iterations": 2,
+  "system_info": {
+    "platform": "Windows-10-10.0.19045-SP0",
+    "python_version": "3.14.0",
+    "processor": "AMD64 Family 23 Model 24 Stepping 1, AuthenticAMD",
+    "numpy_version": "2.5.3"
+  },
+  "candidate_a_status": {
+    "model_name": "R(2+1)D-18 (Candidate A)",
+    "checkpoint_expected_path": "E:\\Technical_Projects\\2026-SIH\\SIH26174\\models\\r2plus1d_18.pt",
+    "checkpoint_present": false,
+    "runtime_framework_installed": false,
+    "framework_name": "PyTorch / torchvision",
+    "inference_executable": false,
+    "status": "BLOCKED",
+    "blocker_reason": "PyTorch is not installed in the active environment and no R(2+1)D-18 checkpoint (.pt/.onnx) exists in the repository."
+  },
+  "candidate_b_status": {
+    "model_name": "1D-TCN (Candidate B)",
+    "checkpoint_expected_path": "E:\\Technical_Projects\\2026-SIH\\SIH26174\\data\\temporal_action.tflite",
+    "checkpoint_present": false,
+    "runtime_framework_installed": false,
+    "framework_name": "tflite_runtime / tensorflow.lite",
+    "inference_executable": false,
+    "status": "BLOCKED",
+    "blocker_reason": "Neither tflite_runtime nor tensorflow is installed, and the model artifact 'data/temporal_action.tflite' does not exist on disk."
+  },
+  "dataset_status": {
+    "hmdb51_raw_directory": "E:\\Technical_Projects\\2026-SIH\\SIH26174\\training\\data\\raw\\hmdb51_sta",
+    "hmdb51_present": true,
+    "hmdb51_role": "Raw video decoding & frame extraction benchmark only (NOT EXP-001 accuracy)",
+    "exp001_procedure_dataset": "NOT_COLLECTED",
+    "exp001_status": "BLOCKED — Protocol defined in Gate B3; clips not yet recorded"
+  },
+  "candidate_b_measurements": {
+    "feature_dimension": 111,
+    "temporal_window_size": 30,
+    "tensor_shape": [
+      1,
+      30,
+      111
+    ],
+    "feature_extraction_timing": {
+      "iterations": 2,
+      "mean_ms": 0.0602,
+      "median_ms": 0.0602,
+      "min_ms": 0.0456,
+      "max_ms": 0.0748,
+      "std_ms": 0.0146,
+      "p95_ms": 0.0733,
+      "throughput_fps": 16611.3
+    },
+    "buffer_stacking_timing": {
+      "iterations": 2,
+      "mean_ms": 0.1161,
+      "median_ms": 0.1161,
+      "min_ms": 0.0833,
+      "max_ms": 0.1489,
+      "std_ms": 0.0328,
+      "p95_ms": 0.1456,
+      "throughput_fps": 8613.26
+    },
+    "total_pipeline_timing": {
+      "iterations": 2,
+      "mean_ms": 0.1763,
+      "median_ms": 0.1763,
+      "min_ms": 0.1289,
+      "max_ms": 0.2237,
+      "std_ms": 0.0474,
+      "p95_ms": 0.219,
+      "throughput_fps": 5672.15
+    },
+    "single_vector_bytes": 444,
+    "buffer_window_bytes": 13320,
+    "tensor_memory_bytes": 13320
+  },
+  "candidate_a_measurements": {
+    "standard_shape": [
+      1,
+      3,
+      16,
+      112,
+      112
+    ],
+    "highres_shape": [
+      1,
+      3,
+      32,
+      224,
+      224
+    ],
+    "tensor_prep_16x112_timing": {
+      "iterations": 2,
+      "mean_ms": 93.784,
+      "median_ms": 93.784,
+      "min_ms": 93.6343,
+      "max_ms": 93.9336,
+      "std_ms": 0.1496,
+      "p95_ms": 93.9186,
+      "throughput_fps": 10.66
+    },
+    "tensor_prep_32x224_timing": {
+      "iterations": 5,
+      "mean_ms": 641.8439,
+      "median_ms": 649.8473,
+      "min_ms": 604.7389,
+      "max_ms": 660.3958,
+      "std_ms": 19.636,
+      "p95_ms": 659.061,
+      "throughput_fps": 1.56
+    },
+    "tensor_16x112_bytes": 2408448,
+    "tensor_32x224_bytes": 19267584
+  },
+  "theoretical_estimates": {
+    "candidate_a_r2plus1d_18": {
+      "architecture": "R(2+1)D-18",
+      "reference_source": "Tran et al., 'A Closer Look at Spatiotemporal Convolutions for Action Recognition', CVPR 2018",
+      "theoretical_parameters": 31500000,
+      "theoretical_gflops_16x112": 7.5,
+      "theoretical_gflops_32x224": 30.0,
+      "estimated_rpi5_cpu_latency_ms": "150 - 400 ms (Theoretical Estimate)",
+      "estimated_ram_mb": "150 - 500 MB (Theoretical Estimate)"
+    },
+    "candidate_b_1d_tcn": {
+      "architecture": "1D-TCN (Causal Dilated Residual)",
+      "reference_source": "Lea et al., 'Temporal Convolutional Networks for Action Segmentation and Detection', CVPR 2017",
+      "theoretical_parameters": 50000,
+      "theoretical_mflops_30x111": 2.5,
+      "estimated_rpi5_cpu_latency_ms": "< 3.0 ms (Theoretical Estimate)",
+      "estimated_ram_mb": "< 5.0 MB (Host buffer < 1 MB)"
+    }
+  },
+  "blocked_metrics": {
+    "candidate_a_inference_latency": {
+      "status": "BLOCKED",
+      "reason": "PyTorch is not installed in the active environment and no R(2+1)D-18 checkpoint (.pt/.onnx) exists in the repository.",
+      "metric_value": null
+    },
+    "candidate_b_inference_latency": {
+      "status": "BLOCKED",
+      "reason": "Neither tflite_runtime nor tensorflow is installed, and the model artifact 'data/temporal_action.tflite' does not exist on disk.",
+      "metric_value": null
+    },
+    "candidate_a_accuracy_f1": {
+      "status": "BLOCKED",
+      "reason": "No EXP-001 procedure dataset collected and no trained R(2+1)D checkpoint exists.",
+      "metric_value": null
+    },
+    "candidate_b_accuracy_f1": {
+      "status": "BLOCKED",
+      "reason": "No EXP-001 procedure dataset collected and no trained 1D-TCN checkpoint exists.",
+      "metric_value": null
+    },
+    "orientation_robustness_drop_delta": {
+      "status": "BLOCKED",
+      "reason": "Requires per-angle F1 scores from real model inference across all 7 canonical angles.",
+      "metric_value": null
+    }
+  },
+  "status": "PARTIALLY_PASSED",
+  "notes": "Deterministic benchmark harness completed successfully. Feature extraction, buffer stacking, and video tensor preparation pipelines were verified and measured empirically in pure NumPy. Model-level inference latency, memory, and classification accuracy are explicitly reported as BLOCKED pending trained checkpoints and dataset collection. No winner is declared."
+}

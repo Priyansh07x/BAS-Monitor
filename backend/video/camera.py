@@ -1,4 +1,7 @@
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 
 class Camera:
@@ -7,6 +10,8 @@ class Camera:
         self.capture = None
 
     def open(self):
+        if cv2 is None:
+            return False
         if self.capture is not None:
             return True
 
@@ -20,7 +25,7 @@ class Camera:
         return True
 
     def read(self):
-        if self.capture is None:
+        if self.capture is None or cv2 is None:
             return None
 
         success, frame = self.capture.read()
@@ -36,4 +41,4 @@ class Camera:
             self.capture = None
 
     def is_open(self):
-        return self.capture is not None and self.capture.isOpened()
+        return self.capture is not None and getattr(self.capture, "isOpened", lambda: True)()
