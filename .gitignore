@@ -14,3 +14,12 @@ training/
 
 BAS-Monitor/.venv/
 BAS-Monitor/node_modules/
+
+# Ignore AI model weights and exports to prevent GH file size errors
+model/exports/*.pt
+model/exports/*.zip
+model/exports/part2_runtime_package/*.pt
+model/exports/part2_runtime_package/*.zip
+model/exports/part2_runtime_package.zip
+*.pt
+*.hef

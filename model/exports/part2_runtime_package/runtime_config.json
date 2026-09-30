@@ -1,0 +1,58 @@
+{
+  "model_name": "r2plus1d_18",
+  "checkpoint_filename": "best_checkpoint.pt",
+  "class_to_idx": {
+    "not_catch": 0,
+    "catch": 1
+  },
+  "idx_to_class": {
+    "0": "not_catch",
+    "1": "catch"
+  },
+  "clip_length": 16,
+  "image_size": 224,
+  "mean": [
+    0.48500001430511475,
+    0.4560000002384186,
+    0.4059999883174896
+  ],
+  "std": [
+    0.2290000021457672,
+    0.2240000069141388,
+    0.22499999403953552
+  ],
+  "window_stride_frames": 4,
+  "ema_alpha": 0.35,
+  "action_on_threshold": 0.5,
+  "action_off_threshold": 0.3,
+  "min_action_event_windows": 2,
+  "yolo_weights": "yolov8n.pt",
+  "yolo_confidence": 0.5,
+  "yolo_sample_every_n_frames": 4,
+  "relevant_object_classes": [
+    "book",
+    "bottle",
+    "cell phone",
+    "cup",
+    "person",
+    "sports ball"
+  ],
+  "mediapipe_sample_every_n_frames": 4,
+  "pose_min_detection_confidence": 0.5,
+  "hand_min_detection_confidence": 0.5,
+  "max_num_hands": 2,
+  "sequence_thresholds": {
+    "min_person_detection_rate": 0.2,
+    "min_hand_detection_rate": 0.1,
+    "min_max_action_prob_for_possible_catch": 0.2,
+    "min_action_events_for_valid": 1
+  },
+  "part1_checkpoint_metadata": {
+    "best_epoch": 6,
+    "val_accuracy": 0.9210526315789473,
+    "val_precision": 0.8,
+    "val_recall": 0.5333333333333333,
+    "val_f1": 0.64,
+    "val_balanced_accuracy": 0.7565656565656566
+  }
+}

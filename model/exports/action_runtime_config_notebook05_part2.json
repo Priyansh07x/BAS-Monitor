@@ -1,0 +1,35 @@
+{
+  "model_name": "r2plus1d_18",
+  "checkpoint_path": "/content/drive/MyDrive/SIH26174/training/checkpoints/action_model/best_checkpoint.pt",
+  "class_to_idx": {
+    "not_catch": 0,
+    "catch": 1
+  },
+  "idx_to_class": {
+    "0": "not_catch",
+    "1": "catch"
+  },
+  "clip_length": 16,
+  "image_size": 224,
+  "mean": [
+    0.48500001430511475,
+    0.4560000002384186,
+    0.4059999883174896
+  ],
+  "std": [
+    0.2290000021457672,
+    0.2240000069141388,
+    0.22499999403953552
+  ],
+  "window_stride_frames": 4,
+  "smoothing_method": "ema",
+  "ema_alpha": 0.35,
+  "rolling_window": 5,
+  "on_threshold": 0.6,
+  "off_threshold": 0.4,
+  "min_event_windows": 2,
+  "part1_best_epoch": 6,
+  "part1_val_f1": 0.64,
+  "part1_val_recall": 0.5333333333333333,
+  "part1_val_precision": 0.8
+}
