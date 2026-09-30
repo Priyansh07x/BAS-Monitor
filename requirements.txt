@@ -17,3 +17,4 @@ shiboken6==6.11.2
 aiortc==1.15.0
 aiohttp==3.14.3
 aiohttp-cors
+psutil==6.0.0

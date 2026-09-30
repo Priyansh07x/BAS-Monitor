@@ -36,6 +36,39 @@ ws.onopen = function() {
             });
         }
 
+
+        if (backend.diagnosticsReady) {
+            backend.diagnosticsReady.connect(function(payloadJson) {
+                try {
+                    const payload = JSON.parse(payloadJson);
+                    
+                    const cpuEl = document.getElementById('diag-cpu');
+                    if (cpuEl) {
+                        cpuEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full mr-1.5 ${payload.cpu_percent > 85 ? 'bg-error' : 'bg-tertiary-fixed-dim'}"></span> ${payload.cpu_percent}%`;
+                        cpuEl.className = `flex items-center ${payload.cpu_percent > 85 ? 'text-error' : 'text-tertiary-fixed-dim'}`;
+                    }
+                    const ramEl = document.getElementById('diag-ram');
+                    if (ramEl) {
+                        ramEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full mr-1.5 ${payload.ram_percent > 85 ? 'bg-error' : 'bg-tertiary-fixed-dim'}"></span> ${payload.ram_percent}%`;
+                        ramEl.className = `flex items-center ${payload.ram_percent > 85 ? 'text-error' : 'text-tertiary-fixed-dim'}`;
+                    }
+                    const camEl = document.getElementById('diag-camera');
+                    if (camEl) {
+                        const isActive = payload.camera_state === 'ACTIVE';
+                        camEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full mr-1.5 ${isActive ? 'bg-tertiary-fixed-dim' : 'bg-outline-variant'}"></span> ${payload.camera_state}`;
+                        camEl.className = `flex items-center ${isActive ? 'text-tertiary-fixed-dim' : 'text-on-surface-variant'}`;
+                    }
+                    const modelEl = document.getElementById('diag-model');
+                    if (modelEl) {
+                        modelEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full mr-1.5 bg-tertiary-fixed-dim"></span> ${payload.ai_mode} (${payload.fps} FPS)`;
+                    }
+                } catch (e) {
+                    console.error("Error parsing diagnostics:", e);
+                }
+            });
+        }
+
+
         loadExperiments();
 
         backend.startCamera(function(success) {

@@ -74,10 +74,12 @@ from .network.streamer import get_ip_streamer
 from .logging.system_logger import get_system_logger
 from .voice.voice_alert import get_voice_service
 from .ai.inference_worker import InferenceWorker
+from .system.diagnostics import DiagnosticsPoller
 
 
 class Bridge(QObject):
     stateChanged = Signal(str)
+    diagnosticsReady = Signal(str)
     # Recording signals
     recordingStarted = Signal(str)
     recordingStopped = Signal(str)
@@ -129,6 +131,11 @@ class Bridge(QObject):
         self._camera_telemetry_lock = threading.Lock()
         self._camera_frame_count: int = 0
         self._camera_ingest_times: collections.deque[float] = collections.deque(maxlen=200)
+
+        # Phase A14/A17 Diagnostics Poller
+        self._diagnostics = DiagnosticsPoller(interval_sec=1.0)
+        self._diagnostics.set_callback(self._on_diagnostics_ready)
+        self._diagnostics.start()
 
     # ================================================================== #
     #  EXPERIMENT MANAGEMENT
@@ -933,6 +940,19 @@ class Bridge(QObject):
         self._cam_mgr.disconnect_all()
         if self.inference_worker is not None:
             self.inference_worker.shutdown(timeout=2.0)
+        self._diagnostics.stop()
         self.stopCamera()
         self._recorder.shutdown()
         self._voice.shutdown()
+
+    def _on_diagnostics_ready(self, payload_json: str):
+        # Merge dynamic state before emitting
+        if self.inference_worker is not None:
+            tel = self.inference_worker.get_telemetry_snapshot()
+            if tel:
+                self._diagnostics.update_app_state(fps=tel.get("ai_fps", 0.0))
+        
+        cam_active = "ACTIVE" if self.cameraIsOpen() else "STANDBY"
+        self._diagnostics.update_app_state(camera_state=cam_active)
+        
+        self.diagnosticsReady.emit(payload_json)

@@ -2296,3 +2296,13 @@ TEMPLATE FOR NEW ENTRIES:
 
 
 
+
+### [DECISION-023] Phase A14/A17 — Live Diagnostics Telemetry
+- **Date:** 2026-09-30
+- **Status:** IMPLEMENTED
+- **Category:** FRONTEND / ARCHITECTURE
+- **Files Changed:** `backend/system/diagnostics.py` (new), `backend/bridge.py` (modified), `frontend/index.html` (modified), `frontend/assets/js/app.js` (modified)
+- **Reason:** The GUI dashboard had hard-coded placeholders for System Diagnostics (AI Model status, Camera Feed, CPU, RAM). Workstream A requirements (Phases A14 & A17) specified that these badges must dynamically reflect real-time hardware telemetry and backend state.
+- **Consideration:** A continuous loop was needed to poll `psutil` without blocking the main QWebChannel. Added a `DiagnosticsPoller` daemon thread that collects CPU %, RAM %, and aggregates AI frame rate (FPS) and Camera connection status from the backend, then emits a `diagnosticsReady` Qt signal at 1Hz.
+- **Decision:** Implemented `DiagnosticsPoller` using `psutil`. Wired it into `Bridge` to emit telemetry over WebSocket. Extended `app.js` to receive this JSON payload and dynamically manipulate the DOM, updating text content and CSS color classes based on healthy/warning thresholds. Added `diag-cpu` and `diag-ram` to `index.html`.
+- **Code Change Summary:** Wrote diagnostics daemon, registered `psutil` dependency, patched QObject signals, implemented JavaScript DOM updates, and appended new HTML dashboard rows.
