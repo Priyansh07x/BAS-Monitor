@@ -1,99 +1,36 @@
 {
-  "id": "EXP-001",
-  "name": "Microgravity Sample Transfer and Containment Procedure",
+  "id": "EXP-CATCH-01",
+  "name": "Catch the Ball Procedure",
   "version": "1.0.0",
-  "purpose": "Standardized protocol for astronaut sample acquisition, container deposition, and vessel sealing in microgravity to validate sequence tracking and AI procedure monitoring.",
+  "purpose": "A simple experiment to test catching a ball.",
   "preconditions": [
-    "Workstation camera calibrated and unobstructed",
-    "Sample tray with red and blue samples in initial rest position",
-    "Container open with lid accessible",
-    "AI perception pipeline initialized and in RUNNING state"
+    "User is ready with hands open",
+    "Ball is visible"
   ],
   "completion_conditions": [
-    "Red sample placed in container",
-    "Blue sample placed in container",
-    "Container lid securely closed",
-    "FSM transitions to COMPLETED state"
+    "Ball is successfully caught"
   ],
   "failure_conditions": [
-    "Step executed out of sequence (e.g. S3 before S1)",
-    "Step skipped without execution",
-    "Action duration exceeds timeout threshold",
-    "Action classification confidence below minimum threshold"
+    "Ball is dropped"
   ],
   "objects": [
-    "RED_SAMPLE",
-    "BLUE_SAMPLE",
-    "SAMPLE_CONTAINER",
-    "CONTAINER_LID"
+    "BALL"
   ],
   "actions": [
-    "PICK_RED",
-    "PLACE_RED",
-    "PICK_BLUE",
-    "PLACE_BLUE",
-    "CLOSE_LID"
+    "CATCH_BALL"
   ],
   "steps": [
     {
       "id": "S1",
       "step_number": 1,
-      "action": "PICK_RED",
-      "object": "RED_SAMPLE",
-      "description": "Pick up red sample",
-      "instruction": "Grasp the red sample from the sample holding rack.",
-      "duration_est": 30,
-      "timeout_s": 30,
-      "confidence_threshold": 0.70,
-      "recovery": "Return hand to starting position and re-acquire the red sample."
-    },
-    {
-      "id": "S2",
-      "step_number": 2,
-      "action": "PLACE_RED",
-      "object": "RED_SAMPLE",
-      "description": "Place red sample in container",
-      "instruction": "Transfer and deposit the red sample securely into the container.",
-      "duration_est": 30,
-      "timeout_s": 30,
-      "confidence_threshold": 0.70,
-      "recovery": "Retrieve red sample if dislodged and place firmly inside the container."
-    },
-    {
-      "id": "S3",
-      "step_number": 3,
-      "action": "PICK_BLUE",
-      "object": "BLUE_SAMPLE",
-      "description": "Pick up blue sample",
-      "instruction": "Grasp the blue sample from the sample holding rack.",
-      "duration_est": 30,
-      "timeout_s": 30,
-      "confidence_threshold": 0.70,
-      "recovery": "Return hand to starting position and re-acquire the blue sample."
-    },
-    {
-      "id": "S4",
-      "step_number": 4,
-      "action": "PLACE_BLUE",
-      "object": "BLUE_SAMPLE",
-      "description": "Place blue sample in container",
-      "instruction": "Transfer and deposit the blue sample securely into the container.",
-      "duration_est": 30,
-      "timeout_s": 30,
-      "confidence_threshold": 0.70,
-      "recovery": "Retrieve blue sample if dislodged and place firmly inside the container."
-    },
-    {
-      "id": "S5",
-      "step_number": 5,
-      "action": "CLOSE_LID",
-      "object": "CONTAINER_LID",
-      "description": "Close the container lid",
-      "instruction": "Align and securely close the container lid to seal the vessel.",
-      "duration_est": 25,
-      "timeout_s": 25,
-      "confidence_threshold": 0.70,
-      "recovery": "Re-align container lid and press firmly until locked."
+      "action": "CATCH_BALL",
+      "object": "BALL",
+      "description": "Catch the ball",
+      "instruction": "Catch the incoming ball securely.",
+      "duration_est": 10,
+      "timeout_s": 20,
+      "confidence_threshold": 0.50,
+      "recovery": "Pick up the ball and try again."
     }
   ]
 }

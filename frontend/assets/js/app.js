@@ -654,41 +654,13 @@ function deleteExperiment(experimentId) {
     };
 
     // --- Predefined Experiment Steps (ISRO Microgravity Experiment Sample) ---
-    const experimentSteps = [
+        const experimentSteps = [
         {
             id: 1,
-            title: "Container Retrieval & Setup",
-            desc: "Retrieve test sample container from payload rack and verify seals.",
-            expectedAction: "PICK_CONTAINER",
-            durationEst: "30s"
-        },
-        {
-            id: 2,
-            title: "Sample Transfer & Pipetting",
-            desc: "Transfer 5ml reagent into reaction vessel using automated pipette.",
-            expectedAction: "PIPETTE_TRANSFER",
-            durationEst: "45s"
-        },
-        {
-            id: 3,
-            title: "Analyzer Chamber Insertion",
-            desc: "Insert reaction vessel firmly into optical analyzer slot B.",
-            expectedAction: "INSERT_ANALYZER",
-            durationEst: "20s"
-        },
-        {
-            id: 4,
-            title: "Optical & Telemetry Scan",
-            desc: "Engage optical sensor probe and initiate 5-second spectroscopic read.",
-            expectedAction: "INITIATE_SCAN",
-            durationEst: "15s"
-        },
-        {
-            id: 5,
-            title: "Sealing & Storage",
-            desc: "Cap reaction vessel, log telemetry batch, and return container to rack.",
-            expectedAction: "SEAL_CONTAINER",
-            durationEst: "25s"
+            title: "Catch the Ball",
+            desc: "Catch the incoming ball securely.",
+            expectedAction: "CATCH_BALL",
+            durationEst: "10s"
         }
     ];
 

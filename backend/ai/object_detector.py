@@ -20,6 +20,7 @@ class ObjectDetector:
     """
 
     KNOWN_CLASSES = [
+        "BALL",
         "RED_SAMPLE",
         "BLUE_SAMPLE",
         "SAMPLE_CONTAINER",

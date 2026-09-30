@@ -21,6 +21,7 @@ class ActionClassifier:
     """
 
     DEFAULT_ACTIONS = [
+        "CATCH_BALL",
         "PICK_RED",
         "PLACE_RED",
         "PICK_BLUE",

@@ -2306,3 +2306,13 @@ TEMPLATE FOR NEW ENTRIES:
 - **Consideration:** A continuous loop was needed to poll `psutil` without blocking the main QWebChannel. Added a `DiagnosticsPoller` daemon thread that collects CPU %, RAM %, and aggregates AI frame rate (FPS) and Camera connection status from the backend, then emits a `diagnosticsReady` Qt signal at 1Hz.
 - **Decision:** Implemented `DiagnosticsPoller` using `psutil`. Wired it into `Bridge` to emit telemetry over WebSocket. Extended `app.js` to receive this JSON payload and dynamically manipulate the DOM, updating text content and CSS color classes based on healthy/warning thresholds. Added `diag-cpu` and `diag-ram` to `index.html`.
 - **Code Change Summary:** Wrote diagnostics daemon, registered `psutil` dependency, patched QObject signals, implemented JavaScript DOM updates, and appended new HTML dashboard rows.
+
+### [DECISION-024] Change Sample Experiment to Catching a Ball
+- **Date:** 2026-09-30
+- **Status:** IMPLEMENTED
+- **Category:** CONFIG
+- **Files Changed:** `config/experiment.json`, `frontend/assets/js/app.js`, `backend/ai/action_classifier.py`, `backend/ai/object_detector.py`
+- **Reason:** The user requested changing the default pre-loaded experiment to a much simpler "catching a ball" procedure for testing purposes.
+- **Consideration:** The existing procedure was complex (5 steps, microgravity specific). The AI pipeline strictly enforces vocabulary, so changing the experiment requires updating the config, the JS frontend, and adding the terms to the known classes in the backend detectors.
+- **Decision:** Updated `config/experiment.json` to have a single step (`CATCH_BALL`). Updated `experimentSteps` in `app.js` to match visually. Added `"BALL"` to `KNOWN_CLASSES` in `object_detector.py` and `"CATCH_BALL"` to `DEFAULT_ACTIONS` in `action_classifier.py`.
+- **Code Change Summary:** Wrote single-step catch the ball JSON, patched javascript, appended to python AI vocabularies.
