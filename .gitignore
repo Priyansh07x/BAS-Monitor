@@ -1,8 +1,16 @@
 venv/
+.venv/
+env/
 __pycache__/
 *.pyc
+.pytest_cache/
 .vscode/
 *.log
 data/recordings/
 data/logs/
 data/snapshots/
+
+training/
+
+BAS-Monitor/.venv/
+BAS-Monitor/node_modules/

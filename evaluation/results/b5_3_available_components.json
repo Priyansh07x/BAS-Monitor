@@ -1,0 +1,326 @@
+{
+  "gate": "B5.3",
+  "timestamp": "2026-09-30T05:34:43.568837",
+  "seed": 42,
+  "iterations": 1,
+  "warmup_iterations": 5,
+  "environment": {
+    "platform": "Windows-10-10.0.19045-SP0",
+    "python_version": "3.14.0",
+    "processor": "AMD64 Family 23 Model 24 Stepping 1, AuthenticAMD",
+    "cpu_count": 8,
+    "total_ram_gb": 17.95,
+    "numpy_version": "2.5.3",
+    "opencv_installed": false,
+    "pytorch_installed": false,
+    "tflite_installed": false
+  },
+  "feature_extraction": {
+    "timing": {
+      "iterations": 1,
+      "mean_ms": 0.0468,
+      "median_ms": 0.0468,
+      "min_ms": 0.0468,
+      "max_ms": 0.0468,
+      "std_ms": 0.0,
+      "p95_ms": 0.0468,
+      "throughput": 21367.52,
+      "throughput_unit": "frames/s"
+    },
+    "vector_dimension": 111,
+    "vector_memory_bytes": 444,
+    "vector_dtype": "float32"
+  },
+  "temporal_buffering": {
+    "timing": {
+      "iterations": 1,
+      "mean_ms": 0.0642,
+      "median_ms": 0.0642,
+      "min_ms": 0.0642,
+      "max_ms": 0.0642,
+      "std_ms": 0.0,
+      "p95_ms": 0.0642,
+      "throughput": 15576.33,
+      "throughput_unit": "windows/s"
+    },
+    "window_size": 30,
+    "stacked_tensor_shape": [
+      1,
+      30,
+      111
+    ],
+    "buffer_memory_bytes": 13320
+  },
+  "combined_feature_and_buffer_prep_ms": 0.111,
+  "frame_preprocessing": {
+    "detector_preprocessing_640x640": {
+      "iterations": 1,
+      "mean_ms": 4.2095,
+      "median_ms": 4.2095,
+      "min_ms": 4.2095,
+      "max_ms": 4.2095,
+      "std_ms": 0.0,
+      "p95_ms": 4.2095,
+      "throughput": 237.56,
+      "throughput_unit": "frames/s"
+    },
+    "pose_preprocessing_256x256": {
+      "iterations": 1,
+      "mean_ms": 27.7645,
+      "median_ms": 27.7645,
+      "min_ms": 27.7645,
+      "max_ms": 27.7645,
+      "std_ms": 0.0,
+      "p95_ms": 27.7645,
+      "throughput": 36.02,
+      "throughput_unit": "frames/s"
+    },
+    "detector_input_shape": [
+      640,
+      640,
+      3
+    ],
+    "pose_input_shape": [
+      256,
+      256,
+      3
+    ]
+  },
+  "rectification_preprocessing": {
+    "baseline_pipeline": {
+      "iterations": 1,
+      "mean_ms": 33.4653,
+      "median_ms": 33.4653,
+      "min_ms": 33.4653,
+      "max_ms": 33.4653,
+      "std_ms": 0.0,
+      "p95_ms": 33.4653,
+      "throughput": 29.88,
+      "throughput_unit": "frames/s"
+    },
+    "rectified_pipeline_90deg": {
+      "iterations": 1,
+      "mean_ms": 251.7351,
+      "median_ms": 251.7351,
+      "min_ms": 251.7351,
+      "max_ms": 251.7351,
+      "std_ms": 0.0,
+      "p95_ms": 251.7351,
+      "throughput": 3.97,
+      "throughput_unit": "frames/s"
+    },
+    "overhead": {
+      "iterations": 1,
+      "mean_ms": 218.2698,
+      "median_ms": 218.2698,
+      "min_ms": 218.2698,
+      "max_ms": 218.2698,
+      "std_ms": 0.0,
+      "p95_ms": 218.2698,
+      "throughput": 4.58,
+      "throughput_unit": "overhead_ms"
+    }
+  },
+  "orientation_preprocessing": {
+    "0_deg": {
+      "angle_degrees": 0,
+      "timing": {
+        "iterations": 1,
+        "mean_ms": 0.0568,
+        "median_ms": 0.0568,
+        "min_ms": 0.0568,
+        "max_ms": 0.0568,
+        "std_ms": 0.0,
+        "p95_ms": 0.0568,
+        "throughput": 17605.64,
+        "throughput_unit": "frames/s"
+      },
+      "note": "Geometric frame rotation latency only (preprocessing stage)"
+    },
+    "45_deg": {
+      "angle_degrees": 45,
+      "timing": {
+        "iterations": 1,
+        "mean_ms": 89.248,
+        "median_ms": 89.248,
+        "min_ms": 89.248,
+        "max_ms": 89.248,
+        "std_ms": 0.0,
+        "p95_ms": 89.248,
+        "throughput": 11.2,
+        "throughput_unit": "frames/s"
+      },
+      "note": "Geometric frame rotation latency only (preprocessing stage)"
+    },
+    "90_deg": {
+      "angle_degrees": 90,
+      "timing": {
+        "iterations": 1,
+        "mean_ms": 65.5855,
+        "median_ms": 65.5855,
+        "min_ms": 65.5855,
+        "max_ms": 65.5855,
+        "std_ms": 0.0,
+        "p95_ms": 65.5855,
+        "throughput": 15.25,
+        "throughput_unit": "frames/s"
+      },
+      "note": "Geometric frame rotation latency only (preprocessing stage)"
+    },
+    "135_deg": {
+      "angle_degrees": 135,
+      "timing": {
+        "iterations": 1,
+        "mean_ms": 76.1638,
+        "median_ms": 76.1638,
+        "min_ms": 76.1638,
+        "max_ms": 76.1638,
+        "std_ms": 0.0,
+        "p95_ms": 76.1638,
+        "throughput": 13.13,
+        "throughput_unit": "frames/s"
+      },
+      "note": "Geometric frame rotation latency only (preprocessing stage)"
+    },
+    "180_deg": {
+      "angle_degrees": 180,
+      "timing": {
+        "iterations": 1,
+        "mean_ms": 45.5028,
+        "median_ms": 45.5028,
+        "min_ms": 45.5028,
+        "max_ms": 45.5028,
+        "std_ms": 0.0,
+        "p95_ms": 45.5028,
+        "throughput": 21.98,
+        "throughput_unit": "frames/s"
+      },
+      "note": "Geometric frame rotation latency only (preprocessing stage)"
+    },
+    "225_deg": {
+      "angle_degrees": 225,
+      "timing": {
+        "iterations": 1,
+        "mean_ms": 40.0898,
+        "median_ms": 40.0898,
+        "min_ms": 40.0898,
+        "max_ms": 40.0898,
+        "std_ms": 0.0,
+        "p95_ms": 40.0898,
+        "throughput": 24.94,
+        "throughput_unit": "frames/s"
+      },
+      "note": "Geometric frame rotation latency only (preprocessing stage)"
+    },
+    "270_deg": {
+      "angle_degrees": 270,
+      "timing": {
+        "iterations": 1,
+        "mean_ms": 88.1818,
+        "median_ms": 88.1818,
+        "min_ms": 88.1818,
+        "max_ms": 88.1818,
+        "std_ms": 0.0,
+        "p95_ms": 88.1818,
+        "throughput": 11.34,
+        "throughput_unit": "frames/s"
+      },
+      "note": "Geometric frame rotation latency only (preprocessing stage)"
+    }
+  },
+  "tensor_preparation": {
+    "candidate_a_standard_16x112": {
+      "tensor_shape": [
+        1,
+        3,
+        16,
+        112,
+        112
+      ],
+      "timing": {
+        "iterations": 1,
+        "mean_ms": 88.3348,
+        "median_ms": 88.3348,
+        "min_ms": 88.3348,
+        "max_ms": 88.3348,
+        "std_ms": 0.0,
+        "p95_ms": 88.3348,
+        "throughput": 11.32,
+        "throughput_unit": "clips/s"
+      },
+      "memory_bytes": 2408448,
+      "memory_kb": 2352.0
+    },
+    "candidate_a_highres_32x224": {
+      "tensor_shape": [
+        1,
+        3,
+        32,
+        224,
+        224
+      ],
+      "timing": {
+        "iterations": 5,
+        "mean_ms": 663.2806,
+        "median_ms": 634.6599,
+        "min_ms": 603.635,
+        "max_ms": 806.5268,
+        "std_ms": 73.2254,
+        "p95_ms": 775.2158,
+        "throughput": 1.51,
+        "throughput_unit": "clips/s"
+      },
+      "memory_bytes": 19267584,
+      "memory_kb": 18816.0
+    },
+    "candidate_b_window_30x111": {
+      "tensor_shape": [
+        1,
+        30,
+        111
+      ],
+      "timing": {
+        "iterations": 1,
+        "mean_ms": 0.19,
+        "median_ms": 0.19,
+        "min_ms": 0.19,
+        "max_ms": 0.19,
+        "std_ms": 0.0,
+        "p95_ms": 0.19,
+        "throughput": 5263.16,
+        "throughput_unit": "windows/s"
+      },
+      "memory_bytes": 13320,
+      "memory_kb": 13.01
+    }
+  },
+  "blocked_model_metrics": {
+    "candidate_a_inference_latency": {
+      "status": "BLOCKED",
+      "reason": "PyTorch is not installed in the active environment and no R(2+1)D-18 checkpoint exists.",
+      "metric_value": null
+    },
+    "candidate_b_inference_latency": {
+      "status": "BLOCKED",
+      "reason": "Neither tflite_runtime nor tensorflow is installed, and data/temporal_action.tflite is absent.",
+      "metric_value": null
+    },
+    "model_classification_accuracy": {
+      "status": "BLOCKED",
+      "reason": "EXP-001 procedure dataset is NOT COLLECTED; no trained 5-action checkpoints exist.",
+      "metric_value": null
+    },
+    "model_precision_recall_f1": {
+      "status": "BLOCKED",
+      "reason": "Requires real predictions on held-out EXP-001 test clips.",
+      "metric_value": null
+    },
+    "orientation_f1_degradation": {
+      "status": "BLOCKED",
+      "reason": "Requires per-angle F1 scores from real model inference across all 7 canonical angles.",
+      "metric_value": null
+    }
+  },
+  "status": "PARTIALLY_PASSED",
+  "notes": "All available preprocessing, spatial vector extraction, temporal buffering, and tensor preparation components successfully benchmarked with warm-up. Model-level inference and accuracy metrics remain explicitly BLOCKED. No winner is declared."
+}

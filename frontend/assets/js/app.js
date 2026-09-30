@@ -8,90 +8,168 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Python Backend Connection ---
     let backend = null;
 
-new QWebChannel(qt.webChannelTransport, function(channel) {
-    backend = channel.objects.backend;
+const wsUrl = `ws://${window.location.hostname || 'localhost'}:8001`;
+const ws = new WebSocket(wsUrl);
+console.log("Connecting to WebSocket:", wsUrl);
 
-    console.log("Python backend connected successfully.");
+ws.onopen = function() {
+    new QWebChannel(ws, function(channel) {
+        backend = channel.objects.backend;
 
-    // Send Initial UI startup Logs to backend
-    log("BAS Experiment Monitor initializing...", "SYS");
-    log("Edge HAR Neural Network Model loaded (YOLOv8 + SlowFast).", "SYS");
-    log("Sequence Engine active. Predefined Experiment: EXP-01 Loaded.", "SYS");
-    log("System Ready. Waiting for camera input or video source.", "SYS");
+        console.log("Python backend connected successfully via WebSocket.");
 
-    if (backend.logMessage) {
-        backend.logMessage.connect(function(msg, type) {
-            log(msg, type, true); // true = fromBackend
+        // Send Initial UI startup Logs to backend
+        log("BAS Experiment Monitor initializing...", "SYS");
+        log("Edge HAR Neural Network Model loaded (YOLOv8 + SlowFast).", "SYS");
+        log("Sequence Engine active. Predefined Experiment: EXP-01 Loaded.", "SYS");
+        log("System Ready. Waiting for camera input or video source.", "SYS");
+
+        if (backend.logMessage) {
+            backend.logMessage.connect(function(msg, type) {
+                log(msg, type, true); // true = fromBackend
+            });
+        }
+
+        if (backend.recTimerTick) {
+            backend.recTimerTick.connect(function(timeStr) {
+                window.basOnRecTimerTick(timeStr);
+            });
+        }
+
+
+        if (backend.diagnosticsReady) {
+            backend.diagnosticsReady.connect(function(payloadJson) {
+                try {
+                    const payload = JSON.parse(payloadJson);
+                    
+                    const cpuEl = document.getElementById('diag-cpu');
+                    if (cpuEl) {
+                        cpuEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full mr-1.5 ${payload.cpu_percent > 85 ? 'bg-error' : 'bg-tertiary-fixed-dim'}"></span> ${payload.cpu_percent}%`;
+                        cpuEl.className = `flex items-center ${payload.cpu_percent > 85 ? 'text-error' : 'text-tertiary-fixed-dim'}`;
+                    }
+                    const ramEl = document.getElementById('diag-ram');
+                    if (ramEl) {
+                        ramEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full mr-1.5 ${payload.ram_percent > 85 ? 'bg-error' : 'bg-tertiary-fixed-dim'}"></span> ${payload.ram_percent}%`;
+                        ramEl.className = `flex items-center ${payload.ram_percent > 85 ? 'text-error' : 'text-tertiary-fixed-dim'}`;
+                    }
+                    const camEl = document.getElementById('diag-camera');
+                    if (camEl) {
+                        const isActive = payload.camera_state === 'ACTIVE';
+                        camEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full mr-1.5 ${isActive ? 'bg-tertiary-fixed-dim' : 'bg-outline-variant'}"></span> ${payload.camera_state}`;
+                        camEl.className = `flex items-center ${isActive ? 'text-tertiary-fixed-dim' : 'text-on-surface-variant'}`;
+                    }
+                    const modelEl = document.getElementById('diag-model');
+                    if (modelEl) {
+                        modelEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full mr-1.5 bg-tertiary-fixed-dim"></span> ${payload.ai_mode} (${payload.fps} FPS)`;
+                    }
+                } catch (e) {
+                    console.error("Error parsing diagnostics:", e);
+                }
+            });
+        }
+
+
+        loadExperiments();
+
+        backend.startCamera(function(success) {
+            console.log("Python camera started:", success);
+
+            if (success) {
+                state.inputSource = 'camera';
+
+                if (elements.videoElement) {
+                    elements.videoElement.classList.remove('hidden');
+                }
+
+                if (elements.videoPlaceholder) {
+                    elements.videoPlaceholder.classList.add('hidden');
+                }
+
+                if (elements.videoSourceText) {
+                    elements.videoSourceText.textContent =
+                        "Source: Python/OpenCV Camera";
+                }
+
+                if (elements.outputActiveFilename) {
+                    elements.outputActiveFilename.textContent =
+                        "Source: Python/OpenCV Camera";
+                }
+
+                updateStatusUI();
+                startPythonCameraFeed();
+            } else {
+                console.error("Python camera could not be started.");
+            }
         });
+    });
+};
+ws.onerror = function(err) {
+    console.error("WebSocket Error:", err);
+};
+ws.onclose = function() {
+    console.warn("WebSocket closed.");
+};
+function startPythonCameraFeed() {
+    console.log("Starting Python camera feed via WebRTC...");
+
+    if (elements.pythonCameraFeed) elements.pythonCameraFeed.classList.add('hidden');
+    if (elements.videoPlaceholder) elements.videoPlaceholder.classList.add('hidden');
+    if (elements.videoElement) {
+        elements.videoElement.classList.remove('hidden');
     }
 
-    if (backend.recTimerTick) {
-        backend.recTimerTick.connect(function(timeStr) {
-            window.basOnRecTimerTick(timeStr);
-        });
-    }
+    var pc = new RTCPeerConnection();
 
-    loadExperiments();
-
-    backend.startCamera(function(success) {
-        console.log("Python camera started:", success);
-
-        if (success) {
-            state.inputSource = 'camera';
-
-            if (elements.videoElement) {
-                elements.videoElement.classList.remove('hidden');
-            }
-
-            if (elements.videoPlaceholder) {
-                elements.videoPlaceholder.classList.add('hidden');
-            }
-
-            if (elements.videoSourceText) {
-                elements.videoSourceText.textContent =
-                    "Source: Python/OpenCV Camera";
-            }
-
-            if (elements.outputActiveFilename) {
-                elements.outputActiveFilename.textContent =
-                    "Source: Python/OpenCV Camera";
-            }
-
-            updateStatusUI();
-            startPythonCameraFeed();
-        } else {
-            console.error("Python camera could not be started.");
+    pc.addEventListener('track', function(evt) {
+        if (evt.track.kind == 'video') {
+            console.log("WebRTC video track received");
+            elements.videoElement.srcObject = evt.streams[0];
+            elements.videoElement.play();
         }
     });
-});
-function startPythonCameraFeed() {
-    console.log("Starting Python camera feed...");
 
-    setInterval(() => {
-        if (!backend) return;
+    pc.addTransceiver('video', {direction: 'recvonly'});
 
-        backend.getCameraFrame(function(base64Frame) {
-            if (!base64Frame) return;
-
-            if (elements.pythonCameraFeed) {
-                elements.pythonCameraFeed.src =
-                    "data:image/jpeg;base64," + base64Frame;
-
-                elements.pythonCameraFeed.classList.remove('hidden');
+    pc.createOffer().then(function(offer) {
+        return pc.setLocalDescription(offer);
+    }).then(function() {
+        return new Promise(function(resolve) {
+            if (pc.iceGatheringState === 'complete') {
+                resolve();
+            } else {
+                function checkState() {
+                    if (pc.iceGatheringState === 'complete') {
+                        pc.removeEventListener('icegatheringstatechange', checkState);
+                        resolve();
+                    }
+                }
+                pc.addEventListener('icegatheringstatechange', checkState);
+                setTimeout(resolve, 500); // Fallback timeout for local networks
             }
-
-            if (elements.videoElement) {
-                elements.videoElement.classList.add('hidden');
-            }
-
-            if (elements.videoPlaceholder) {
-                elements.videoPlaceholder.classList.add('hidden');
-            }
-
-            state.inputSource = 'camera';
-            updateStatusUI();
         });
-    }, 100);
+    }).then(function() {
+        var offer = pc.localDescription;
+        const wsHost = window.location.hostname || 'localhost';
+        return fetch(`http://${wsHost}:8555/offer`, {
+            body: JSON.stringify({
+                sdp: offer.sdp,
+                type: offer.type
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            method: 'POST'
+        });
+    }).then(function(response) {
+        return response.json();
+    }).then(function(answer) {
+        return pc.setRemoteDescription(answer);
+    }).catch(function(e) {
+        console.error("WebRTC Connection Error:", e);
+    });
+
+    state.inputSource = 'camera';
+    updateStatusUI();
 }
 
 
@@ -576,41 +654,13 @@ function deleteExperiment(experimentId) {
     };
 
     // --- Predefined Experiment Steps (ISRO Microgravity Experiment Sample) ---
-    const experimentSteps = [
+        const experimentSteps = [
         {
             id: 1,
-            title: "Container Retrieval & Setup",
-            desc: "Retrieve test sample container from payload rack and verify seals.",
-            expectedAction: "PICK_CONTAINER",
-            durationEst: "30s"
-        },
-        {
-            id: 2,
-            title: "Sample Transfer & Pipetting",
-            desc: "Transfer 5ml reagent into reaction vessel using automated pipette.",
-            expectedAction: "PIPETTE_TRANSFER",
-            durationEst: "45s"
-        },
-        {
-            id: 3,
-            title: "Analyzer Chamber Insertion",
-            desc: "Insert reaction vessel firmly into optical analyzer slot B.",
-            expectedAction: "INSERT_ANALYZER",
-            durationEst: "20s"
-        },
-        {
-            id: 4,
-            title: "Optical & Telemetry Scan",
-            desc: "Engage optical sensor probe and initiate 5-second spectroscopic read.",
-            expectedAction: "INITIATE_SCAN",
-            durationEst: "15s"
-        },
-        {
-            id: 5,
-            title: "Sealing & Storage",
-            desc: "Cap reaction vessel, log telemetry batch, and return container to rack.",
-            expectedAction: "SEAL_CONTAINER",
-            durationEst: "25s"
+            title: "Catch the Ball",
+            desc: "Catch the incoming ball securely.",
+            expectedAction: "CATCH_BALL",
+            durationEst: "10s"
         }
     ];
 
@@ -1191,10 +1241,8 @@ function deleteExperiment(experimentId) {
         state.isPaused = !state.isPaused;
         if (state.isPaused) {
             log("Analysis paused.", "AI");
-            if (elements.videoElement) elements.videoElement.pause();
         } else {
             log("Analysis resumed.", "AI");
-            if (elements.videoElement) elements.videoElement.play();
         }
     }
 
@@ -1204,7 +1252,6 @@ function deleteExperiment(experimentId) {
         clearInterval(state.analysisInterval);
         
         if (elements.aiDetectionOverlay) elements.aiDetectionOverlay.classList.add('hidden');
-        if (elements.videoElement) elements.videoElement.pause();
         
         clearCanvas();
         log("Analysis pipeline stopped.", "AI");

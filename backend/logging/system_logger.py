@@ -122,6 +122,12 @@ class SystemLogger:
         self.logger.info(f"[STREAM] {msg}")
         self._notify_listeners("STREAM", msg)
 
+    def log_recovery(self, step_id: str, recovery_instruction: str, procedural_status: str = "") -> None:
+        """Log an operational procedural recovery warning."""
+        status_tag = f" ({procedural_status})" if procedural_status else ""
+        msg = f"PROCEDURAL RECOVERY [{step_id}]: {recovery_instruction}{status_tag}"
+        self.warn(msg)
+
 
 # Module-level singleton
 _system_logger_instance: Optional[SystemLogger] = None

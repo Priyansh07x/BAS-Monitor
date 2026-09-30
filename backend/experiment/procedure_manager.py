@@ -25,6 +25,8 @@ class ProcedureStep:
         description: str = "",
         required_object: Optional[str] = None,
         duration_est_seconds: float = 30.0,
+        recovery: str = "",
+        timeout_s: Optional[float] = None,
     ):
         self.step_id = str(step_id)
         self.step_number = int(step_number)
@@ -33,6 +35,8 @@ class ProcedureStep:
         self.description = str(description).strip() or self.instruction
         self.required_object = required_object
         self.duration_est_seconds = float(duration_est_seconds)
+        self.recovery = str(recovery).strip()
+        self.timeout_s = float(timeout_s) if timeout_s is not None else self.duration_est_seconds
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -43,6 +47,8 @@ class ProcedureStep:
             "description": self.description,
             "required_object": self.required_object,
             "duration_est_seconds": self.duration_est_seconds,
+            "recovery": self.recovery,
+            "timeout_s": self.timeout_s,
         }
 
 
@@ -94,6 +100,12 @@ class ProcedureManager:
             if isinstance(duration, str):
                 duration = float(duration.replace("s", "").strip())
 
+            recovery = s.get("recovery", "")
+            raw_timeout = s.get("timeout_s", s.get("timeout", duration))
+            if isinstance(raw_timeout, str):
+                raw_timeout = float(raw_timeout.replace("s", "").strip())
+            timeout_s = float(raw_timeout) if raw_timeout is not None else float(duration)
+
             step = ProcedureStep(
                 step_id=str(s_id),
                 step_number=idx,
@@ -102,6 +114,8 @@ class ProcedureManager:
                 description=desc,
                 required_object=req_obj,
                 duration_est_seconds=float(duration),
+                recovery=recovery,
+                timeout_s=timeout_s,
             )
             self.steps.append(step)
             if action:
@@ -126,6 +140,32 @@ class ProcedureManager:
     def get_step_by_action(self, action: str) -> Optional[ProcedureStep]:
         """Lookup step by its expected action string."""
         return self._action_to_step.get(action.strip())
+
+    def get_step_by_id(self, step_id: str) -> Optional[ProcedureStep]:
+        """Lookup step by its canonical step ID (e.g. 'S1')."""
+        norm_id = str(step_id).strip().upper()
+        for s in self.steps:
+            if s.step_id.upper() == norm_id:
+                return s
+        return None
+
+    @staticmethod
+    def normalize_step_id(step_val: Any) -> Optional[str]:
+        """Normalize various step representations ('S1', 1, '1', 's1') to canonical 'S1'–'S5' or None."""
+        if step_val is None:
+            return None
+        s = str(step_val).strip().upper()
+        if s in {"S1", "S2", "S3", "S4", "S5"}:
+            return s
+        if s.isdigit():
+            num = int(s)
+            if 1 <= num <= 5:
+                return f"S{num}"
+        if s.startswith("S") and s[1:].isdigit():
+            num = int(s[1:])
+            if 1 <= num <= 5:
+                return f"S{num}"
+        return None
 
     def get_next_step(self, current_index: int) -> Optional[ProcedureStep]:
         """Return the subsequent step given current index."""

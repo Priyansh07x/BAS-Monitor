@@ -21,11 +21,7 @@ class ActionClassifier:
     """
 
     DEFAULT_ACTIONS = [
-        "PICK_CONTAINER",
-        "PIPETTE_TRANSFER",
-        "INSERT_ANALYZER",
-        "INITIATE_SCAN",
-        "SEAL_CONTAINER",
+        "CATCH_BALL",
         "PICK_RED",
         "PLACE_RED",
         "PICK_BLUE",
@@ -49,6 +45,10 @@ class ActionClassifier:
         self._input_details = None
         self._output_details = None
         self._is_tflite_ready = False
+
+        self._prior_interaction_state: Optional[str] = None
+        self._last_action: str = "IDLE"
+        self._last_target_sample: Optional[str] = None
 
         self._init_tflite()
 
@@ -74,13 +74,27 @@ class ActionClassifier:
         """Add a 1D spatial vector from the current frame to the temporal sliding window."""
         self._vector_buffer.append(vector)
 
-    def classify(self, interaction_state: Optional[str] = None) -> Tuple[str, float]:
+    def classify(
+        self,
+        interaction_state: Optional[str] = None,
+        target_object: Optional[str] = None,
+        interaction: Optional[Dict[str, Any]] = None,
+        objects: Optional[List[Dict[str, Any]]] = None,
+        hands: Optional[List[Dict[str, Any]]] = None,
+    ) -> Tuple[str, float]:
         """
         Classifies the active temporal sequence.
         Returns: (action_label, confidence_score)
         """
         if len(self._vector_buffer) < 5:
             return "IDLE", 0.95
+
+        # Extract interaction evidence from interaction dict if provided
+        if interaction is not None:
+            if interaction_state is None:
+                interaction_state = interaction.get("state")
+            if target_object is None:
+                target_object = interaction.get("target_object")
 
         # 1. Real TFLite inference if available
         if self._is_tflite_ready and self._interpreter is not None:
@@ -100,21 +114,76 @@ class ActionClassifier:
 
                 best_idx = int(np.argmax(output_data))
                 best_conf = float(output_data[best_idx])
-                action_name = self.actions[best_idx] if best_idx < len(self.actions) else "UNKNOWN"
+                action_name = self.actions[best_idx] if best_idx < len(self.actions) else "IDLE"
+                self._last_action = action_name
+                self._prior_interaction_state = interaction_state
                 return action_name, round(best_conf, 2)
             except Exception:
                 pass
 
-        # 2. Heuristic inference based on interaction dynamics
-        if interaction_state == "HOLDING":
-            return "PICK_CONTAINER", 0.95
-        elif interaction_state == "APPROACHING":
-            return "PIPETTE_TRANSFER", 0.91
-        elif interaction_state == "OPERATING":
-            return "INSERT_ANALYZER", 0.96
+        # 2. Deterministic canonical heuristic fallback (Gate B6.2)
+        # Development fallback ONLY — not a trained neural model.
+        action_name = "IDLE"
+        action_conf = 0.90
 
-        return "IDLE", 0.90
+        # Assess container proximity evidence if interaction dict has container metrics
+        is_near_container = False
+        if interaction is not None:
+            c_iou = interaction.get("container_iou", 0.0) or 0.0
+            c_dist = interaction.get("container_distance")
+            c_scale_prox = interaction.get("container_scale_proximity")
+            if c_iou > 0.0 or (c_scale_prox is not None and c_scale_prox <= 1.2) or (c_dist is not None and c_dist <= 0.20):
+                is_near_container = True
+
+        if interaction_state in ("HOLDING", "OPERATING"):
+            if target_object == "CONTAINER_LID":
+                action_name = "CLOSE_LID"
+                action_conf = 0.95
+            elif target_object == "RED_SAMPLE":
+                self._last_target_sample = "RED_SAMPLE"
+                if is_near_container:
+                    action_name = "PLACE_RED"
+                    action_conf = 0.95
+                else:
+                    action_name = "PICK_RED"
+                    action_conf = 0.95
+            elif target_object == "BLUE_SAMPLE":
+                self._last_target_sample = "BLUE_SAMPLE"
+                if is_near_container:
+                    action_name = "PLACE_BLUE"
+                    action_conf = 0.95
+                else:
+                    action_name = "PICK_BLUE"
+                    action_conf = 0.95
+            elif target_object == "SAMPLE_CONTAINER":
+                # Contact with container fixture: resolve deposition based on active sample
+                if self._last_target_sample == "RED_SAMPLE" or self._last_action == "PICK_RED":
+                    action_name = "PLACE_RED"
+                    action_conf = 0.88
+                elif self._last_target_sample == "BLUE_SAMPLE" or self._last_action == "PICK_BLUE":
+                    action_name = "PLACE_BLUE"
+                    action_conf = 0.88
+                else:
+                    action_name = "IDLE"
+                    action_conf = 0.80
+            else:
+                action_name = "IDLE"
+                action_conf = 0.85
+        elif interaction_state == "APPROACHING":
+            # Approaching alone is non-action / waiting state (do not invent early pick/place)
+            action_name = "IDLE"
+            action_conf = 0.75
+        else:
+            action_name = "IDLE"
+            action_conf = 0.90
+
+        self._last_action = action_name
+        self._prior_interaction_state = interaction_state
+        return action_name, action_conf
 
     def reset_buffer(self) -> None:
-        """Clear temporal window buffer."""
+        """Clear temporal window buffer and internal fallback state."""
         self._vector_buffer.clear()
+        self._prior_interaction_state = None
+        self._last_action = "IDLE"
+        self._last_target_sample = None

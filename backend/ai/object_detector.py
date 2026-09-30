@@ -20,13 +20,11 @@ class ObjectDetector:
     """
 
     KNOWN_CLASSES = [
-        "CONTAINER",
-        "SAMPLE_VIAL",
-        "PIPETTE",
-        "ANALYZER_CHAMBER",
+        "BALL",
+        "RED_SAMPLE",
+        "BLUE_SAMPLE",
+        "SAMPLE_CONTAINER",
         "CONTAINER_LID",
-        "REAGENT_BOTTLE",
-        "FORCEPS",
     ]
 
     def __init__(
@@ -93,12 +91,12 @@ class ObjectDetector:
                 pass
 
         # 2. Simulated/Heuristic edge fallback for test environments without weights
-        # Detects center-region sample container fixture
+        # Detects canonical EXP-001 sample container fixture and specimen
         cx, cy = 0.5, 0.55
         box_w, box_h = 0.28, 0.38
         return [
             {
-                "label": "CONTAINER",
+                "label": "SAMPLE_CONTAINER",
                 "confidence": 0.94,
                 "x1": round(cx - box_w / 2, 4),
                 "y1": round(cy - box_h / 2, 4),
@@ -106,7 +104,7 @@ class ObjectDetector:
                 "y2": round(cy + box_h / 2, 4),
             },
             {
-                "label": "SAMPLE_VIAL",
+                "label": "RED_SAMPLE",
                 "confidence": 0.88,
                 "x1": round(cx - 0.08, 4),
                 "y1": round(cy - 0.12, 4),
